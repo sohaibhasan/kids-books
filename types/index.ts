@@ -1,0 +1,63 @@
+export type AgeTier = 'tiny' | 'early' | 'growing' | 'independent'
+export type Genre = 'fantasy' | 'adventure' | 'sci-fi' | 'nature' | 'fairy-tale' | 'everyday' | 'mystery' | 'humor'
+export type ArtStyle = 'dog-man' | 'watercolor' | 'bold-bright' | 'pencil-sketch' | 'pixel-art'
+export type PageLayout = 'full-bleed' | 'text-left' | 'text-right' | 'text-overlay'
+export type StoryStatus = 'draft' | 'generating' | 'published'
+
+export interface Character {
+  id: string
+  story_id: string
+  name: string
+  role: 'protagonist' | 'supporting'
+  appearance_description: string
+  reference_image_url?: string
+}
+
+export interface Page {
+  id: string
+  story_id: string
+  page_number: number
+  text_content: string
+  scene_description: string
+  illustration_url?: string
+  layout: PageLayout
+}
+
+export interface Story {
+  id: string
+  user_id?: string
+  title: string
+  share_slug: string
+  genre: Genre
+  theme: string
+  lesson: string
+  art_style: ArtStyle
+  age_tier: AgeTier
+  language: string
+  status: StoryStatus
+  pages?: Page[]
+  characters?: Character[]
+  created_at: string
+  updated_at: string
+}
+
+export interface WizardFormData {
+  // Step 1 - Child details
+  child_name: string
+  child_age: number
+  child_pronouns: string
+  child_appearance: string
+  // Step 2 - Story setup
+  genre: Genre
+  theme: string
+  lesson: string
+  setting: string
+  supporting_characters: string
+  // Step 3 - Style
+  art_style: ArtStyle
+  tone: 'silly' | 'heartfelt' | 'adventurous'
+  length: 'short' | 'medium' | 'long'
+  // Extras
+  dedication?: string
+  language: string
+}
