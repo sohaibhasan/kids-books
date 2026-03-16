@@ -34,9 +34,9 @@ We are in a prototype stage ahead of Phase 1. The content pipeline (story author
 The goal: a real web app where a user fills out a form and gets a generated story.
 
 ### 1. Initialize Next.js App
-- [ ] `npx create-next-app@latest` with TypeScript + Tailwind
-- [ ] Set up folder structure (`/app`, `/components`, `/lib`)
-- [ ] Configure environment variables (Claude API key, HF token)
+- [x] `npx create-next-app@latest` with TypeScript + Tailwind
+- [x] Set up folder structure (`/app`, `/components`, `/lib`)
+- [x] Configure environment variables (Claude API key, HF token)
 
 ### 2. Story Creation Wizard (UI)
 - [ ] Step 1 — Child details: name, age, pronouns, appearance
