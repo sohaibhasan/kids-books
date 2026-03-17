@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { WizardFormData } from '@/types'
 import ProgressBar from './ProgressBar'
 import StepChild from './steps/StepChild'
@@ -39,9 +40,11 @@ function canAdvance(step: number, data: WizardFormData): boolean {
 }
 
 export default function WizardContainer() {
+  const router = useRouter()
   const [step, setStep] = useState(1)
   const [data, setData] = useState<WizardFormData>(defaultData)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const update = (fields: Partial<WizardFormData>) => setData(prev => ({ ...prev, ...fields }))
   const next = () => setStep(s => Math.min(s + 1, TOTAL_STEPS))
@@ -49,11 +52,23 @@ export default function WizardContainer() {
 
   const handleCreate = async () => {
     setSubmitting(true)
-    // TODO: POST /api/stories
-    console.log('Creating story with:', data)
-    await new Promise(r => setTimeout(r, 1000))
-    alert('Story creation coming soon! Check the console for form data.')
-    setSubmitting(false)
+    setError('')
+    try {
+      const res = await fetch('/api/stories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.error || `Server error ${res.status}`)
+      }
+      const { slug } = await res.json()
+      router.push(`/generating/${slug}`)
+    } catch (err) {
+      setError(String(err))
+      setSubmitting(false)
+    }
   }
 
   const steps = [
@@ -83,6 +98,13 @@ export default function WizardContainer() {
           <ProgressBar current={step} total={TOTAL_STEPS} />
           {steps[step - 1]}
         </div>
+
+        {/* Error */}
+        {error && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl px-4 py-3 text-sm text-red-700 font-medium">
+            ⚠️ {error}
+          </div>
+        )}
 
         {/* Navigation */}
         <div className="flex justify-between items-center">
