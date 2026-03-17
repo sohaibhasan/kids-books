@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(echo:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(.venv/bin/python3 - <<'EOF'\nimport json, requests, certifi\n\napi_key = open\\(\".env\"\\).read\\(\\).split\\(\"=\"\\)[1].strip\\(\\)\nurl = f\"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}\"\nresp = requests.get\\(url, verify=certifi.where\\(\\)\\)\nmodels = resp.json\\(\\).get\\(\"models\", []\\)\n\nfor m in models:\n    methods = m.get\\(\"supportedGenerationMethods\", []\\)\n    if any\\(x in str\\(methods\\).lower\\(\\) for x in [\"image\", \"predict\", \"generate\"]\\):\n        print\\(f\"{m['name']}\"\\)\n        print\\(f\"  methods: {methods}\"\\)\n        print\\(f\"  description: {m.get\\('description',''\\)[:120]}\"\\)\n        print\\(\\)\nEOF)",
+      "Bash(open:*)",
+      "Bash(git status:*)",
+      "Bash(which git:*)",
+      "Bash(git remote:*)",
+      "Bash(du:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)",
+      "Bash(node:*)",
+      "Bash(which node:*)",
+      "Bash(while:*)",
+      "Bash(export:*)",
+      "Bash(source:*)",
+      "Bash(~/.nvm/versions/node/v20.20.1/bin/node --version && ~/.nvm/versions/node/v20.20.1/bin/npm --version)"
+    ]
+  }
+}
