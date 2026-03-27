@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-03-16
+Last updated: 2026-03-25
 
 ---
 
 ## Current Phase: Phase 1 — MVP (In Progress)
 
-The Next.js app is initialized and the wizard UI is complete. The "Create My Story" button is a stub — it logs form data but does not yet call any API. Next up: wire the Claude API for story text generation.
+Supabase is fully integrated — stories persist to Postgres and images upload to Supabase Storage. The app is ready for Vercel deployment. Next up: deploy to Vercel and run an end-to-end production test.
 
 ---
 
@@ -39,33 +39,35 @@ The Next.js app is initialized and the wizard UI is complete. The "Create My Sto
   - [x] Step 5 — Art style, tone, length
   - [x] Step 6 — Review summary
   - [x] Progress bar, Back/Next navigation, per-step validation
-- [ ] "Create My Story" wired to API — **currently a stub, no story is generated**
+- [x] "Create My Story" wired to API — full pipeline working
+
+### API Pipeline
+- [x] `ANTHROPIC_API_KEY` in `.env.local` (new key, credits active)
+- [x] `HF_TOKEN` in `.env.local`
+- [x] `POST /api/stories` — calls Claude, saves `story.json` to `public/generated/[slug]/`
+- [x] `GET /api/stories/[slug]/images` — SSE endpoint, generates images via HF FLUX, saves PNGs
+- [x] `lib/ai/generate-story.ts` — Claude sonnet-4-6, age-tier vocabulary, structured JSON output
+- [x] `lib/ai/generate-image.ts` — HF FLUX.1-schnell, style prefix + character description per page
+- [x] `/generating/[slug]` — live progress bar via EventSource, redirects when done
+- [x] `/read/[slug]` — server-rendered reader, page-by-page with keyboard nav
+
+### First AI-Generated Story
+- [x] "Minha and the Kind Little Spark" — 12 pages, fairy-tale, Dog Man style
+- [x] Deployed to GitHub Pages — https://sohaibhasan.github.io/kids-books/stories/minha-and-the-kind-little-spark/
+
+### Database (Supabase)
+- [x] Supabase project created — `yfmlegmlkqkzpxotajna`
+- [x] `stories` table with RLS policies (public read, service role write)
+- [x] `story-images` storage bucket (public)
+- [x] `@supabase/supabase-js` installed, `lib/supabase.ts` client created
+- [x] `POST /api/stories` — inserts to Supabase instead of filesystem
+- [x] `GET /api/stories/[slug]/images` — uploads PNGs to Supabase Storage
+- [x] `/read/[slug]` — reads from Supabase, serves images via public Storage URLs
+- [x] Build passes clean (no TypeScript errors)
 
 ---
 
 ## Phase 1 — Remaining Todos
-
-### 3. Claude API — Story Text Generation
-- [ ] `ANTHROPIC_API_KEY` added to `.env.local`
-- [ ] `/api/stories` POST endpoint — accepts wizard inputs, calls Claude
-- [ ] Prompt template that produces structured page-by-page JSON output
-- [ ] Age-tier vocabulary control (map child age → tier → prompt instructions)
-- [ ] Scene description auto-generated from each page's narrative text
-
-### 4. HF API — Illustration Generation
-- [ ] `/api/stories/[id]/generate` — triggers image gen for all pages sequentially
-- [ ] Style prefix + character description injected automatically per page prompt
-- [ ] Store generated images (initially base64/public folder; S3/R2 later)
-
-### 5. Reader View (React)
-- [ ] `/read/[slug]` route — page-by-page reader, no auth required
-- [ ] Page-turn navigation (arrow keys + buttons)
-- [ ] Responsive layout (desktop two-column, phone stacked)
-
-### 6. Database
-- [ ] Set up Supabase project
-- [ ] Create `stories`, `pages`, `characters` tables
-- [ ] Wire `/api/stories` to persist and retrieve from Supabase
 
 ### 7. Deploy
 - [ ] Deploy Next.js app to Vercel

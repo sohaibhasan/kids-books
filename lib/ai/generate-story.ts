@@ -82,10 +82,12 @@ SCENE DESCRIPTION RULES (apply to every page):
 
   const raw = response.content[0].type === 'text' ? response.content[0].text.trim() : ''
 
-  // Strip accidental markdown fences if present
-  const json = raw.startsWith('```') ? raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '') : raw
+  // Extract JSON — find the outermost { } block to handle any preamble/postamble
+  const start = raw.indexOf('{')
+  const end   = raw.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error('No JSON object found in Claude response')
 
-  return JSON.parse(json)
+  return JSON.parse(raw.slice(start, end + 1))
 }
 
 // Shape returned by Claude (before DB ids are added)

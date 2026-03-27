@@ -27,34 +27,60 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 | Auth | Clerk, NextAuth, or Supabase Auth |
 | Hosting | Vercel or Cloudflare Pages |
 
-## Current State (Prototype)
+## Current State
 
-Stories are hand-authored JSON files. Images are generated via Python scripts and committed alongside a self-contained `index.html` reader. No Next.js app exists yet — the prototype proves out the content pipeline.
+The Next.js app (Phase 1 MVP) is built and working end-to-end locally. The full pipeline — Wizard → Claude story generation → HF image generation → `/read/[slug]` reader — is wired up and functional. Stories are persisted to `public/generated/[slug]/` (gitignored). For sharing, AI-generated stories are exported as self-contained HTML files and deployed to GitHub Pages.
 
-### File Structure
+### Next.js App Structure
 
 ```
-stories/
-  <story-slug>/
-    index.html         ← self-contained reader (images base64-encoded)
-    page-00.png        ← cover
-    page-01.png ...    ← story pages
-    page-14.png        ← end page
-stories/<story-slug>.json  ← storyboard (source of truth)
+app/
+  page.tsx                        ← Landing page
+  wizard/page.tsx                 ← 6-step story wizard
+  generating/[slug]/page.tsx      ← Live image generation progress (SSE)
+  read/[slug]/page.tsx            ← Story reader (server component)
+  api/stories/route.ts            ← POST: Claude story gen → story.json
+  api/stories/[slug]/images/route.ts  ← GET SSE: HF image gen → page-XX.png
+components/
+  wizard/WizardContainer.tsx      ← Wizard state + navigation
+  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepReview
+  reader/StoryReader.tsx          ← Page-by-page reader client component
+  ui/                             ← Button, Input, SelectCard
+lib/
+  ai/generate-story.ts            ← Claude API call, age-tier vocab, JSON output
+  ai/generate-image.ts            ← HF FLUX API call, returns Buffer
+  ai/index.ts                     ← STYLE_PREFIXES map per ArtStyle
+  utils/slug.ts                   ← makeSlug()
+types/index.ts                    ← WizardFormData, Story, Page, ArtStyle, etc.
+public/generated/[slug]/          ← story.json + page-XX.png (gitignored)
 ```
 
-### Story JSON Shape
+### Generated Story JSON Shape (Next.js)
 
 ```json
 {
-  "story": { "title", "share_slug", "genre", "theme", "lesson", "art_style", "age_tier", "status" },
-  "character": { "name", "role", "age", "appearance_description" },
-  "style_prefix": "...",
-  "pages": [{ "page_number", "type", "text_content", "scene_description", "layout" }]
+  "slug": "story-slug",
+  "title": "Story Title",
+  "form": { "...wizard inputs..." },
+  "pages": [{ "page_number", "type", "text_content", "scene_description" }],
+  "created_at": "ISO timestamp",
+  "images_done": true
 }
 ```
 
 `page.type` is `"cover"`, `"end"`, or omitted (story page).
+
+### GitHub Pages Static Reader (Prototype)
+
+Self-contained HTML files with base64-encoded images, used for shareable links before Vercel deployment:
+```
+stories/<story-slug>/index.html   ← all images base64-inlined
+```
+URL pattern: `https://sohaibhasan.github.io/kids-books/stories/<story-slug>/`
+
+Published stories:
+- Aamilah and the Dragon's Treasure — `aamilah-and-the-dragon-treasure`
+- Minha and the Kind Little Spark — `minha-and-the-kind-little-spark`
 
 ## Architecture
 
@@ -69,15 +95,11 @@ User → Story → Page (text + illustration + scene prompt)
 - `Page` stores both generated text and the scene description prompt used for image generation
 - `Character` stores appearance details and a reference image URL for cross-page consistency
 
-### Key API Endpoints
+### Implemented API Endpoints
 
 ```
-POST   /api/stories                 → Create story from wizard inputs
-GET    /api/stories/:id             → Fetch full story with pages
-POST   /api/stories/:id/generate    → Trigger AI story + illustration generation
-PATCH  /api/pages/:id               → Edit a single page
-POST   /api/pages/:id/regenerate    → Regenerate one illustration
-GET    /api/read/:slug              → Public reader (no auth required)
+POST   /api/stories                     → Wizard inputs → Claude story JSON → story.json saved → returns {slug}
+GET    /api/stories/[slug]/images       → SSE stream: generates images via HF FLUX, saves PNGs, streams progress
 ```
 
 ### User Flow
@@ -150,9 +172,20 @@ git push -u origin main
 
 Pages URL pattern: `https://sohaibhasan.github.io/kids-books/stories/<story-slug>/`
 
+## Dev Commands
+
+```bash
+# Run dev server (requires Node via nvm)
+export PATH="$HOME/.nvm/versions/node/v20.20.1/bin:$PATH"
+npm run dev
+
+# Build
+npm run build
+```
+
 ## Development Phases
 
-- **Phase 1 (MVP)** — Wizard → Claude story gen → one art style → reader view → shareable link
+- **Phase 1 (MVP)** ✅ Pipeline done — Wizard → Claude → HF images → reader → GitHub Pages share. Remaining: Supabase + Vercel deploy.
 - **Phase 2** — Storyboard editor, multiple art styles, character customization, read-aloud, night mode
 - **Phase 3** — User accounts, story library, age-tier vocabulary, bilingual support
 - **Phase 4** — Stripe payments, subscriptions, print-on-demand, classroom accounts
