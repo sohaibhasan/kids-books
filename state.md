@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-03-25
+Last updated: 2026-03-26
 
 ---
 
 ## Current Phase: Phase 1 — MVP (In Progress)
 
-Supabase is fully integrated — stories persist to Postgres and images upload to Supabase Storage. The app is ready for Vercel deployment. Next up: deploy to Vercel and run an end-to-end production test.
+App is deployed to Vercel and live. Story text generation (Claude) is working. Image generation is hitting a failure that needs investigation. Next up: debug image generation on Vercel and run a clean end-to-end test.
 
 ---
 
@@ -18,6 +18,7 @@ Supabase is fully integrated — stories persist to Postgres and images upload t
 - [x] GitHub Pages live — https://sohaibhasan.github.io/kids-books/
 - [x] Python image generation pipeline (HF FLUX.1-schnell, free tier)
 - [x] `.env` / `.env.local` with all credentials and placeholders
+- [x] `.claude/settings.local.json` added to `.gitignore` (was leaking API keys)
 
 ### First Story: Aamilah and the Dragon's Treasure
 - [x] Story authored (15 pages, JSON storyboard)
@@ -44,12 +45,13 @@ Supabase is fully integrated — stories persist to Postgres and images upload t
 ### API Pipeline
 - [x] `ANTHROPIC_API_KEY` in `.env.local` (new key, credits active)
 - [x] `HF_TOKEN` in `.env.local`
-- [x] `POST /api/stories` — calls Claude, saves `story.json` to `public/generated/[slug]/`
-- [x] `GET /api/stories/[slug]/images` — SSE endpoint, generates images via HF FLUX, saves PNGs
+- [x] `POST /api/stories` — calls Claude, saves to Supabase
+- [x] `GET /api/stories/[slug]/images` — SSE endpoint, generates images via HF FLUX, uploads to Supabase Storage
 - [x] `lib/ai/generate-story.ts` — Claude sonnet-4-6, age-tier vocabulary, structured JSON output
 - [x] `lib/ai/generate-image.ts` — HF FLUX.1-schnell, style prefix + character description per page
 - [x] `/generating/[slug]` — live progress bar via EventSource, redirects when done
-- [x] `/read/[slug]` — server-rendered reader, page-by-page with keyboard nav
+- [x] `/read/[slug]` — reads from Supabase, serves images via public Storage URLs
+- [x] JSON parsing hardened — extracts outermost `{}` block to handle Claude preamble
 
 ### First AI-Generated Story
 - [x] "Minha and the Kind Little Spark" — 12 pages, fairy-tale, Dog Man style
@@ -60,19 +62,20 @@ Supabase is fully integrated — stories persist to Postgres and images upload t
 - [x] `stories` table with RLS policies (public read, service role write)
 - [x] `story-images` storage bucket (public)
 - [x] `@supabase/supabase-js` installed, `lib/supabase.ts` client created
-- [x] `POST /api/stories` — inserts to Supabase instead of filesystem
-- [x] `GET /api/stories/[slug]/images` — uploads PNGs to Supabase Storage
-- [x] `/read/[slug]` — reads from Supabase, serves images via public Storage URLs
-- [x] Build passes clean (no TypeScript errors)
+
+### Deployment (Vercel)
+- [x] Vercel CLI installed, project linked (`sohaibhasans-projects/kids_books`)
+- [x] All env vars set on Vercel: `ANTHROPIC_API_KEY`, `HF_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- [x] App live — https://kidsbooks-eight.vercel.app
+- [x] Build passing cleanly on Vercel
 
 ---
 
 ## Phase 1 — Remaining Todos
 
-### 7. Deploy
-- [ ] Deploy Next.js app to Vercel
-- [ ] Set production environment variables
-- [ ] End-to-end test: wizard → generate → shareable `/read/:slug` link
+### End-to-End Test
+- [ ] Debug image generation failure on Vercel (SSE route / HF FLUX upload to Supabase Storage)
+- [ ] Confirm full flow: wizard → story saved to Supabase → images generated → `/read/[slug]` accessible
 
 ---
 
@@ -96,5 +99,7 @@ Supabase is fully integrated — stories persist to Postgres and images upload t
 | Art style default | Dog Man Comic Book | Bold outlines, flat colors, works well with FLUX |
 | Image prompts | Never include names/words | Diffusion models can't spell reliably |
 | Character consistency | Repeat full appearance in every page prompt | Model has no memory across prompts |
+| Story persistence | Supabase Postgres | Vercel filesystem is ephemeral |
+| Image storage | Supabase Storage | Same reason — no persistent disk on Vercel |
 | Hosting (prototype) | GitHub Pages | Static HTML, zero config |
-| Hosting (app) | Vercel | Planned for Next.js app |
+| Hosting (app) | Vercel | Deployed and live |
