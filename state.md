@@ -1,12 +1,12 @@
 # Project State
 
-Last updated: 2026-03-26
+Last updated: 2026-03-28
 
 ---
 
-## Current Phase: Phase 1 — MVP (In Progress)
+## Current Phase: Phase 1 — MVP (Complete)
 
-App is deployed to Vercel and live. Story text generation (Claude) is working. Image generation is hitting a failure that needs investigation. Next up: debug image generation on Vercel and run a clean end-to-end test.
+Full pipeline is live on Vercel: Wizard → Claude story gen → OpenAI image gen → Supabase storage → `/read/[slug]` reader. Image generation switched from HF FLUX (free credits exhausted, quality low) to OpenAI gpt-image-1 with standard/high quality options. Character consistency improved via structured appearance fields and Claude-generated character sheets. Phase 2 work can begin.
 
 ---
 
@@ -44,14 +44,20 @@ App is deployed to Vercel and live. Story text generation (Claude) is working. I
 
 ### API Pipeline
 - [x] `ANTHROPIC_API_KEY` in `.env.local` (new key, credits active)
-- [x] `HF_TOKEN` in `.env.local`
+- [x] `OPENAI_API_KEY` in `.env.local` (for image generation)
 - [x] `POST /api/stories` — calls Claude, saves to Supabase
-- [x] `GET /api/stories/[slug]/images` — SSE endpoint, generates images via HF FLUX, uploads to Supabase Storage
-- [x] `lib/ai/generate-story.ts` — Claude sonnet-4-6, age-tier vocabulary, structured JSON output
-- [x] `lib/ai/generate-image.ts` — HF FLUX.1-schnell, style prefix + character description per page
+- [x] `GET /api/stories/[slug]/images` — SSE endpoint, generates images via OpenAI gpt-image-1, uploads to Supabase Storage
+- [x] `lib/ai/generate-story.ts` — Claude sonnet-4-6, age-tier vocabulary, character sheet generation, structured JSON output
+- [x] `lib/ai/generate-image.ts` — OpenAI gpt-image-1 with standard/high quality options
 - [x] `/generating/[slug]` — live progress bar via EventSource, redirects when done
 - [x] `/read/[slug]` — reads from Supabase, serves images via public Storage URLs
 - [x] JSON parsing hardened — extracts outermost `{}` block to handle Claude preamble
+- [x] `maxDuration=300` on SSE route to avoid Vercel function timeout
+
+### Character Consistency
+- [x] Structured appearance fields in wizard: skin tone, hair color, hair style, eye color, outfit presets
+- [x] Claude generates a detailed `character_sheet` with fixed outfit, embedded verbatim in every page prompt
+- [x] Switched from DALL-E 3 to gpt-image-1 for better prompt adherence
 
 ### First AI-Generated Story
 - [x] "Minha and the Kind Little Spark" — 12 pages, fairy-tale, Dog Man style
@@ -65,17 +71,10 @@ App is deployed to Vercel and live. Story text generation (Claude) is working. I
 
 ### Deployment (Vercel)
 - [x] Vercel CLI installed, project linked (`sohaibhasans-projects/kids_books`)
-- [x] All env vars set on Vercel: `ANTHROPIC_API_KEY`, `HF_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- [x] All env vars set on Vercel: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `HF_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
 - [x] App live — https://kidsbooks-eight.vercel.app
 - [x] Build passing cleanly on Vercel
-
----
-
-## Phase 1 — Remaining Todos
-
-### End-to-End Test
-- [ ] Debug image generation failure on Vercel (SSE route / HF FLUX upload to Supabase Storage)
-- [ ] Confirm full flow: wizard → story saved to Supabase → images generated → `/read/[slug]` accessible
+- [x] End-to-end flow working: wizard → Claude story gen → OpenAI images → Supabase → `/read/[slug]`
 
 ---
 
@@ -95,10 +94,10 @@ App is deployed to Vercel and live. Story text generation (Claude) is working. I
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Image generation | HF FLUX.1-schnell | Only free-tier option; Gemini image requires billing |
+| Image generation | OpenAI gpt-image-1 | Better quality + consistency than FLUX; $0.005/img standard, $0.04/img high |
 | Art style default | Dog Man Comic Book | Bold outlines, flat colors, works well with FLUX |
 | Image prompts | Never include names/words | Diffusion models can't spell reliably |
-| Character consistency | Repeat full appearance in every page prompt | Model has no memory across prompts |
+| Character consistency | Structured fields + character sheet + fixed outfit in every prompt | Model has no memory across prompts; outfit is strongest anchor |
 | Story persistence | Supabase Postgres | Vercel filesystem is ephemeral |
 | Image storage | Supabase Storage | Same reason — no persistent disk on Vercel |
 | Hosting (prototype) | GitHub Pages | Static HTML, zero config |
