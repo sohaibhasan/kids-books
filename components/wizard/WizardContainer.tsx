@@ -18,6 +18,11 @@ const defaultData: WizardFormData = {
   child_name: '',
   child_age: 6,
   child_pronouns: 'She / Her',
+  skin_tone: '',
+  hair_color: '',
+  hair_style: '',
+  eye_color: '',
+  outfit: '',
   child_appearance: '',
   genre: 'adventure',
   theme: 'Bravery',
@@ -27,6 +32,7 @@ const defaultData: WizardFormData = {
   art_style: 'dog-man',
   tone: 'adventurous',
   length: 'medium',
+  image_quality: 'standard',
   language: 'English',
 }
 

@@ -1,7 +1,7 @@
 'use client'
 
 import SelectCard from '@/components/ui/SelectCard'
-import { ArtStyle, WizardFormData } from '@/types'
+import { ArtStyle, ImageQuality, WizardFormData } from '@/types'
 
 interface Props {
   data: WizardFormData
@@ -25,6 +25,11 @@ const LENGTHS: { value: WizardFormData['length']; icon: string; label: string; p
   { value: 'short',  icon: '📄', label: 'Short',  pages: '~5 pages' },
   { value: 'medium', icon: '📖', label: 'Medium', pages: '~10 pages' },
   { value: 'long',   icon: '📚', label: 'Long',   pages: '~15 pages' },
+]
+
+const QUALITIES: { value: ImageQuality; icon: string; label: string; description: string }[] = [
+  { value: 'standard', icon: '🖼️', label: 'Standard', description: 'Fast & affordable (~$0.005/page)' },
+  { value: 'high',     icon: '🌟', label: 'High',     description: 'Best quality (~$0.04/page)' },
 ]
 
 export default function StepStyle({ data, onChange }: Props) {
@@ -77,6 +82,22 @@ export default function StepStyle({ data, onChange }: Props) {
               description={l.pages}
               selected={data.length === l.value}
               onClick={() => onChange({ length: l.value })}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <label className="text-base font-semibold text-ink">Image quality</label>
+        <div className="grid grid-cols-2 gap-3">
+          {QUALITIES.map(q => (
+            <SelectCard
+              key={q.value}
+              icon={q.icon}
+              label={q.label}
+              description={q.description}
+              selected={data.image_quality === q.value}
+              onClick={() => onChange({ image_quality: q.value })}
             />
           ))}
         </div>

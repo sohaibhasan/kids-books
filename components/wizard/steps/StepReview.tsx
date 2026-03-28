@@ -30,7 +30,8 @@ export default function StepReview({ data }: Props) {
 
       <div className="bg-white rounded-2xl border-4 border-ink shadow-[4px_4px_0_#ffd700] p-5">
         <Row label="Hero" value={`${name}, age ${data.child_age} (${data.child_pronouns})`} />
-        {data.child_appearance && <Row label="Appearance" value={data.child_appearance} />}
+        <Row label="Appearance" value={[data.skin_tone && `${data.skin_tone} skin`, data.hair_color && `${data.hair_color} hair`, data.hair_style, data.eye_color && `${data.eye_color} eyes`, data.child_appearance].filter(Boolean).join(', ') || '—'} />
+        {data.outfit && <Row label="Outfit" value={data.outfit} />}
         <Row label="Genre" value={data.genre} />
         <Row label="Lesson" value={data.lesson} />
         <Row label="Setting" value={data.setting} />

@@ -1,6 +1,7 @@
 export type AgeTier = 'tiny' | 'early' | 'growing' | 'independent'
 export type Genre = 'fantasy' | 'adventure' | 'sci-fi' | 'nature' | 'fairy-tale' | 'everyday' | 'mystery' | 'humor'
 export type ArtStyle = 'dog-man' | 'watercolor' | 'bold-bright' | 'pencil-sketch' | 'pixel-art'
+export type ImageQuality = 'standard' | 'high'
 export type PageLayout = 'full-bleed' | 'text-left' | 'text-right' | 'text-overlay'
 export type StoryStatus = 'draft' | 'generating' | 'published'
 
@@ -46,7 +47,13 @@ export interface WizardFormData {
   child_name: string
   child_age: number
   child_pronouns: string
-  child_appearance: string
+  // Structured appearance
+  skin_tone: string
+  hair_color: string
+  hair_style: string
+  eye_color: string
+  outfit: string
+  child_appearance: string  // freeform extras (glasses, freckles, etc.)
   // Step 2 - Story setup
   genre: Genre
   theme: string
@@ -57,6 +64,8 @@ export interface WizardFormData {
   art_style: ArtStyle
   tone: 'silly' | 'heartfelt' | 'adventurous'
   length: 'short' | 'medium' | 'long'
+  // Image quality
+  image_quality: ImageQuality
   // Extras
   dedication?: string
   language: string
