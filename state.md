@@ -4,9 +4,28 @@ Last updated: 2026-03-28
 
 ---
 
-## Current Phase: Phase 1 — MVP (Complete)
+## Current Phase: Phase 2a — Multi-Provider Image Generation
 
-Full pipeline is live on Vercel: Wizard → Claude story gen → OpenAI image gen → Supabase storage → `/read/[slug]` reader. Image generation switched from HF FLUX (free credits exhausted, quality low) to OpenAI gpt-image-1 with standard/high quality options. Character consistency improved via structured appearance fields and Claude-generated character sheets. Phase 2 work can begin.
+Phase 1 MVP is complete and live. Now wiring up multiple image generation providers so each art style routes to the provider that produces the best results for that aesthetic. See `docs/image-gen-options.md` for full research.
+
+### Phase 2a Tasks
+
+- [ ] Build style router in `lib/ai/generate-image.ts` — maps `art_style` to provider + config
+- [ ] Integrate Recraft V4 API (flat illustration, watercolor, collage, bold & modern)
+- [ ] Integrate fal.ai API for FLUX.2 Pro (storybook realism) + FLUX.1 Kontext (character consistency)
+- [ ] Integrate Google Nano Banana 2 as free-tier fallback
+- [ ] Update wizard art style options from 5 generic styles to 8 book-inspired aesthetics:
+  1. Comic Book (Dog Man / Captain Underpants) → OpenAI
+  2. Classic Watercolor (Peter Rabbit / The Gruffalo) → Recraft V4
+  3. Collage / Paper Cutout (The Very Hungry Caterpillar) → Recraft V4
+  4. Whimsical Ink (Roald Dahl / Quentin Blake) → OpenAI
+  5. Bold & Modern (Pete the Cat / Oliver Jeffers) → Recraft V4
+  6. Soft & Cozy (Goodnight Moon) → OpenAI
+  7. Anime / Ghibli (Studio Ghibli / Totoro) → fal.ai FLUX + LoRA
+  8. Storybook Realism (The Polar Express) → fal.ai FLUX.2 Pro
+- [ ] Update `STYLE_PREFIXES` map and `ArtStyle` type for new aesthetics
+- [ ] Add new env vars to `.env.local` and Vercel: `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
+- [ ] Test each aesthetic end-to-end and deploy
 
 ---
 
@@ -78,10 +97,10 @@ Full pipeline is live on Vercel: Wizard → Claude story gen → OpenAI image ge
 
 ---
 
-## Deferred to Phase 2+
+## Deferred to Phase 2b+
 
 - Storyboard editor (reorder, edit text, regenerate individual images)
-- Multiple art styles in-app
+- FLUX.1 Kontext character consistency upgrade (reference image → all pages)
 - Read-aloud (browser TTS)
 - Night mode
 - User accounts / story library
@@ -94,8 +113,8 @@ Full pipeline is live on Vercel: Wizard → Claude story gen → OpenAI image ge
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Image generation | OpenAI gpt-image-1 | Better quality + consistency than FLUX; $0.005/img standard, $0.04/img high |
-| Art style default | Dog Man Comic Book | Bold outlines, flat colors, works well with FLUX |
+| Image generation | Multi-provider routing | OpenAI (comic, ink, cozy), Recraft V4 (watercolor, collage, bold), fal.ai/FLUX (anime, realism), Google (free fallback) |
+| Art aesthetics | 8 book-inspired styles | See `docs/image-gen-options.md` for full mapping |
 | Image prompts | Never include names/words | Diffusion models can't spell reliably |
 | Character consistency | Structured fields + character sheet + fixed outfit in every prompt | Model has no memory across prompts; outfit is strongest anchor |
 | Story persistence | Supabase Postgres | Vercel filesystem is ephemeral |

@@ -111,18 +111,28 @@ GET    /api/stories/[slug]/images       → SSE stream: generates images via Ope
 
 ## Image Generation
 
-**Provider:** OpenAI `gpt-image-1` (switched from HF FLUX — free credits exhausted, quality insufficient)
-- Endpoint: `https://api.openai.com/v1/images/generations`
-- Auth: `Authorization: Bearer $OPENAI_API_KEY`
-- Quality options: `low` (~$0.005/image) or `high` (~$0.04/image) — selectable in wizard
-- Response: base64-encoded PNG
-- Uses raw `fetch` (not OpenAI SDK — SDK had auth bug with project-scoped keys)
+**Architecture:** Multi-provider routing — each art style maps to the provider that produces the best results for that aesthetic. The style router in `lib/ai/generate-image.ts` selects the provider based on the wizard's `art_style` field.
 
-**Previous providers tested:**
-- HF FLUX.1-schnell — free tier exhausted, low quality
-- HF FLUX.1-dev — deprecated on hf-inference provider (410 error)
-- Gemini image models — all require billing, no free tier
-- See `docs/image-gen-options.md` for full comparison
+**Providers (4):**
+
+| Provider | Env Var | Aesthetics | Cost/Image |
+|----------|---------|-----------|------------|
+| OpenAI gpt-image-1 | `OPENAI_API_KEY` (set) | Comic Book, Whimsical Ink, Soft & Cozy | $0.005–0.04 |
+| Recraft V4 | `RECRAFT_API_KEY` (new) | Classic Watercolor, Collage, Bold & Modern | $0.04 |
+| fal.ai (FLUX.2 Pro + LoRA) | `FAL_KEY` (new) | Anime/Ghibli, Storybook Realism | $0.03–0.055 |
+| Google Nano Banana 2 | `GOOGLE_AI_KEY` (new) | Free-tier fallback for any style | Free (~500/day) |
+
+**8 Art Aesthetics (book-inspired):**
+1. Comic Book (Dog Man) → OpenAI
+2. Classic Watercolor (Peter Rabbit) → Recraft
+3. Collage / Paper Cutout (Very Hungry Caterpillar) → Recraft
+4. Whimsical Ink (Roald Dahl / Quentin Blake) → OpenAI
+5. Bold & Modern (Pete the Cat) → Recraft
+6. Soft & Cozy (Goodnight Moon) → OpenAI
+7. Anime / Ghibli (Totoro) → fal.ai FLUX + LoRA
+8. Storybook Realism (The Polar Express) → fal.ai FLUX.2 Pro
+
+See `docs/image-gen-options.md` for full research, provider comparison, and integration notes.
 
 ### Prompt Structure
 
@@ -174,6 +184,7 @@ npm run build
 ## Development Phases
 
 - **Phase 1 (MVP)** ✅ Complete — Wizard → Claude story gen → OpenAI images → Supabase → Vercel. Character consistency via structured fields + character sheets.
-- **Phase 2** — Storyboard editor, multiple art styles, character customization, read-aloud, night mode
+- **Phase 2a (In Progress)** — Multi-provider image routing: 8 book-inspired art aesthetics, each routed to best provider (OpenAI, Recraft, fal.ai/FLUX, Google free tier). Update wizard with new styles.
+- **Phase 2b** — Storyboard editor, FLUX.1 Kontext character consistency upgrade, read-aloud, night mode
 - **Phase 3** — User accounts, story library, age-tier vocabulary, bilingual support
 - **Phase 4** — Stripe payments, subscriptions, print-on-demand, classroom accounts
