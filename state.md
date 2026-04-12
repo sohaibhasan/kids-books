@@ -1,6 +1,6 @@
 # Project State
 
-Last updated: 2026-03-28
+Last updated: 2026-04-12
 
 ---
 
@@ -10,7 +10,7 @@ Phase 1 MVP is complete and live. Now wiring up multiple image generation provid
 
 ### Phase 2a Tasks
 
-- [ ] Build style router in `lib/ai/generate-image.ts` — maps `art_style` to provider + config
+- [x] Build style router in `lib/ai/generate-image.ts` — maps `art_style` to provider + config
 - [ ] Integrate Recraft V4 API (flat illustration, watercolor, collage, bold & modern)
 - [ ] Integrate fal.ai API for FLUX.2 Pro (storybook realism) + FLUX.1 Kontext (character consistency)
 - [ ] Integrate Google Nano Banana 2 as free-tier fallback

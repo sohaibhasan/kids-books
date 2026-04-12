@@ -28,6 +28,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ slug, title: story.title })
   } catch (err) {
     console.error('[POST /api/stories]', err)
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'string'
+        ? err
+        : (() => {
+            try { return JSON.stringify(err) } catch { return 'Unknown error' }
+          })()
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

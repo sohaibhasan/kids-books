@@ -49,57 +49,64 @@ STORY INPUTS:
 - Tone: ${form.tone}
 - Reading level: ${tier.name} — ${tier.style}
 
-Generate exactly ${pageCount + 2} pages: 1 cover + ${pageCount} story pages + 1 end page.
+Generate exactly ${pageCount + 2} pages: 1 cover (page_number 0, type "cover") + ${pageCount} story pages (page_number 1..${pageCount}) + 1 end page (page_number ${pageCount + 1}, type "end").
 
-RESPOND WITH VALID JSON ONLY. No markdown. No explanation. Just this structure:
-{
-  "title": "Creative story title featuring ${form.child_name}",
-  "character_sheet": "A detailed, fixed visual description of ${form.child_name} that will be pasted verbatim into EVERY image prompt for consistency. You MUST incorporate the exact appearance details provided: ${appearanceDesc}. You MUST include this exact outfit: ${outfitDesc}. Build on these details by adding: age, gender presentation, body build, and any extra flourishes. Write it as one dense paragraph. Do NOT include the character's name — just physical appearance and clothing. The outfit MUST appear identically in every single illustration. Example format: 'A 7-year-old girl with warm brown skin, large round dark brown eyes, long curly black hair in two puffs with yellow hair ties, slim build, wearing a bright red hoodie with a yellow star on the chest, dark blue jeans, and white sneakers with pink laces.'",
-  "pages": [
-    {
-      "page_number": 0,
-      "type": "cover",
-      "text_content": "The story title",
-      "scene_description": "STYLE_PREFIX Cover illustration: CHARACTER_SHEET standing in a heroic exciting pose that hints at the adventure. Setting: ${form.setting}. No text or words in the image."
-    },
-    {
-      "page_number": 1,
-      "text_content": "Opening page story text...",
-      "scene_description": "STYLE_PREFIX Scene: describe what is happening. The main character (CHARACTER_SHEET) is doing X. Setting details. No text or words in the image."
-    },
-    ...all pages in order...,
-    {
-      "page_number": ${pageCount + 1},
-      "type": "end",
-      "text_content": "The End.\\n\\n— The Lesson —\\n\\nOne memorable sentence summing up the lesson.",
-      "scene_description": "STYLE_PREFIX Final cozy scene: CHARACTER_SHEET at peace, the lesson learned. Warm, joyful mood. No text or words in the image."
-    }
-  ]
-}
+Call the return_story tool with the finished storybook.
 
 CRITICAL RULES:
-1. The "character_sheet" field must be a single detailed paragraph describing ${form.child_name}'s EXACT appearance and a SPECIFIC outfit they wear throughout the entire story.
-2. In every scene_description, replace CHARACTER_SHEET with the EXACT character_sheet text — paste it verbatim, do not abbreviate or paraphrase.
-3. Replace STYLE_PREFIX with exactly: "${stylePrefix}"
+1. The "character_sheet" field must be a single detailed paragraph describing ${form.child_name}'s EXACT appearance and a SPECIFIC outfit they wear throughout the entire story. Incorporate the exact appearance details: ${appearanceDesc}. Include this exact outfit: ${outfitDesc}. Add age, gender presentation, body build, and any extra flourishes. Do NOT include the character's name — just physical appearance and clothing. The outfit MUST appear identically in every single illustration.
+2. In every scene_description, paste the EXACT character_sheet text verbatim where the character appears — do not abbreviate or paraphrase.
+3. Every scene_description MUST start with exactly this style prefix: "${stylePrefix}"
 4. Never include text, words, signs, banners, or letters in any image description.
 5. Be specific in scenes: include action, emotion, lighting, and setting details.
 6. Weave in supporting characters (${companions}) naturally throughout.
-7. If supporting characters appear, give each one a FIXED appearance description on first mention and repeat it exactly on subsequent pages.`
+7. If supporting characters appear, give each one a FIXED appearance description on first mention and repeat it exactly on subsequent pages.
+8. The end page's text_content should be: "The End.\\n\\n— The Lesson —\\n\\n<one memorable sentence summing up the lesson>".`
+
+  const pageSchema = {
+    type: 'object' as const,
+    properties: {
+      page_number: { type: 'integer' as const },
+      type:        { type: 'string' as const, enum: ['cover', 'end', 'story'] },
+      text_content:      { type: 'string' as const },
+      scene_description: { type: 'string' as const },
+    },
+    required: ['page_number', 'text_content', 'scene_description'],
+  }
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 8000,
+    tools: [
+      {
+        name: 'return_story',
+        description: 'Return the finished illustrated storybook.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            title:           { type: 'string', description: `Creative story title featuring ${form.child_name}` },
+            character_sheet: { type: 'string', description: 'Dense single paragraph describing the hero\'s exact appearance + fixed outfit, pasted verbatim into every scene_description.' },
+            pages: {
+              type: 'array',
+              items: pageSchema,
+              minItems: pageCount + 2,
+              maxItems: pageCount + 2,
+            },
+          },
+          required: ['title', 'character_sheet', 'pages'],
+        },
+      },
+    ],
+    tool_choice: { type: 'tool', name: 'return_story' },
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const raw = response.content[0].type === 'text' ? response.content[0].text.trim() : ''
+  const toolUse = response.content.find(b => b.type === 'tool_use')
+  if (!toolUse || toolUse.type !== 'tool_use') {
+    throw new Error('Claude did not call return_story tool')
+  }
 
-  // Extract JSON — find the outermost { } block to handle any preamble/postamble
-  const start = raw.indexOf('{')
-  const end   = raw.lastIndexOf('}')
-  if (start === -1 || end === -1) throw new Error('No JSON object found in Claude response')
-
-  return JSON.parse(raw.slice(start, end + 1))
+  return toolUse.input as { title: string; character_sheet: string; pages: StoryPage[] }
 }
 
 // Shape returned by Claude (before DB ids are added)

@@ -1,8 +1,5 @@
-// AI clients — story generation (Claude) and image generation (HF FLUX)
+// AI clients — story generation (Claude) and image generation (multi-provider router)
 // Implementations go in: generate-story.ts, generate-image.ts
-
-export const HF_IMAGE_MODEL = 'black-forest-labs/FLUX.1-schnell'
-export const HF_ENDPOINT = `https://router.huggingface.co/hf-inference/models/${HF_IMAGE_MODEL}`
 
 export const STYLE_PREFIXES: Record<string, string> = {
   'dog-man':
