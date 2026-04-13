@@ -35,7 +35,7 @@ export async function GET(
     console.log(`[images ${slug}] pages type=${typeof rawPages} count=${pages.length}`)
 
     const imageQuality: ImageQuality = form?.image_quality || 'standard'
-    const artStyle: ArtStyle = form?.art_style || 'dog-man'
+    const artStyle: ArtStyle = form?.art_style || 'comic-book'
 
     const encoder = new TextEncoder()
 

@@ -1,6 +1,6 @@
 export type AgeTier = 'tiny' | 'early' | 'growing' | 'independent'
 export type Genre = 'fantasy' | 'adventure' | 'sci-fi' | 'nature' | 'fairy-tale' | 'everyday' | 'mystery' | 'humor'
-export type ArtStyle = 'dog-man' | 'watercolor' | 'bold-bright' | 'pencil-sketch' | 'pixel-art'
+export type ArtStyle = 'comic-book' | 'classic-watercolor' | 'paper-collage' | 'whimsical-ink' | 'bold-modern' | 'soft-cozy' | 'anime-ghibli' | 'storybook-realism'
 export type ImageQuality = 'standard' | 'high'
 export type PageLayout = 'full-bleed' | 'text-left' | 'text-right' | 'text-overlay'
 export type StoryStatus = 'draft' | 'generating' | 'published'

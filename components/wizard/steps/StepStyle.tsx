@@ -9,10 +9,14 @@ interface Props {
 }
 
 const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: string }[] = [
-  { value: 'dog-man',     icon: '💥', label: 'Dog Man',      description: 'Bold outlines, flat colors' },
-  { value: 'watercolor',  icon: '🎨', label: 'Watercolor',   description: 'Soft, dreamy, classic' },
-  { value: 'bold-bright', icon: '✨', label: 'Bold & Bright', description: 'Modern, playful colors' },
-  { value: 'pencil-sketch', icon: '✏️', label: 'Pencil Sketch', description: 'Hand-drawn, cozy' },
+  { value: 'comic-book',         icon: '💥', label: 'Comic Book',         description: 'Bold outlines, flat colors, action energy' },
+  { value: 'classic-watercolor', icon: '🎨', label: 'Classic Watercolor', description: 'Soft washes, delicate ink, warm tones' },
+  { value: 'paper-collage',      icon: '✂️', label: 'Paper Collage',      description: 'Layered textures, bold cut-out shapes' },
+  { value: 'whimsical-ink',      icon: '🖋️', label: 'Whimsical Ink',      description: 'Loose pen-and-ink, sketchy, expressive' },
+  { value: 'bold-modern',        icon: '✨', label: 'Bold & Modern',      description: 'Flat colors, clean shapes, poster-like' },
+  { value: 'soft-cozy',          icon: '🌙', label: 'Soft & Cozy',        description: 'Warm muted tones, gentle, calming' },
+  { value: 'anime-ghibli',       icon: '🌸', label: 'Anime / Ghibli',     description: 'Soft anime, lush backgrounds, pastel' },
+  { value: 'storybook-realism',  icon: '🎭', label: 'Storybook Realism',  description: 'Painterly detail, dramatic lighting' },
 ]
 
 const TONES: { value: WizardFormData['tone']; icon: string; label: string }[] = [

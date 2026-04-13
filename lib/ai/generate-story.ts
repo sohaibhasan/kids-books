@@ -20,7 +20,7 @@ function getPageCount(length: string) {
 export async function generateStory(form: WizardFormData): Promise<{ title: string; character_sheet: string; pages: StoryPage[] }> {
   const tier      = getAgeTier(form.child_age)
   const pageCount = getPageCount(form.length)
-  const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['dog-man']
+  const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['comic-book']
   const companions  = form.supporting_characters
     ? form.supporting_characters.split(',').filter(Boolean).join(', ')
     : 'none'
