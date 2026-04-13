@@ -1,6 +1,7 @@
 'use client'
 
 import SelectCard from '@/components/ui/SelectCard'
+import Input from '@/components/ui/Input'
 import { WizardFormData } from '@/types'
 
 interface Props {
@@ -78,6 +79,14 @@ export default function StepSetting({ data, onChange }: Props) {
             />
           ))}
         </div>
+        {companions.length > 0 && (
+          <Input
+            label="Give them a name (optional)"
+            placeholder="e.g. Luna, Captain Whiskers"
+            value={data.companion_name}
+            onChange={v => onChange({ companion_name: v })}
+          />
+        )}
       </div>
     </div>
   )

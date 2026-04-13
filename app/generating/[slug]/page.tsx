@@ -8,13 +8,15 @@ interface ProgressState {
   current: number
   total: number
   errors: number
+  success: number
+  errorMessage: string
 }
 
 export default function GeneratingPage() {
   const { slug } = useParams<{ slug: string }>()
   const router    = useRouter()
 
-  const [progress, setProgress] = useState<ProgressState>({ done: false, current: 0, total: 0, errors: 0 })
+  const [progress, setProgress] = useState<ProgressState>({ done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '' })
   const [storyTitle, setStoryTitle] = useState('')
   const [status, setStatus] = useState<'generating' | 'error'>('generating')
 
@@ -38,11 +40,19 @@ export default function GeneratingPage() {
       } else if (data.type === 'progress') {
         setProgress(p => ({ ...p, current: data.page + 1 }))
       } else if (data.type === 'error') {
-        setProgress(p => ({ ...p, errors: p.errors + 1, current: data.page + 1 }))
+        setProgress(p => ({
+          ...p,
+          errors: p.errors + 1,
+          current: data.page + 1,
+          errorMessage: p.errorMessage || data.message || 'Unknown error',
+        }))
       } else if (data.type === 'done') {
-        setProgress(p => ({ ...p, done: true }))
+        const success = data.success ?? 0
+        setProgress(p => ({ ...p, done: true, success }))
         es.close()
-        setTimeout(() => router.push(`/read/${slug}`), 800)
+        if (success > 0) {
+          setTimeout(() => router.push(`/read/${slug}`), 800)
+        }
       }
     }
 
@@ -56,15 +66,37 @@ export default function GeneratingPage() {
 
   const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0
 
-  if (status === 'error') {
+  const allFailed = progress.done && progress.success === 0 && progress.total > 0
+
+  if (status === 'error' || allFailed) {
     return (
       <div className="min-h-screen bg-navy flex flex-col items-center justify-center text-white gap-4 px-6 text-center">
         <span className="text-5xl">😔</span>
         <h1 className="text-2xl font-bold text-accent">Something went wrong</h1>
-        <p className="text-white/60 max-w-sm">Image generation hit an error. Check the server logs.</p>
-        <button onClick={() => router.push('/wizard')} className="mt-4 bg-primary text-white font-bold px-6 py-3 rounded-xl border-4 border-white">
-          Try Again
-        </button>
+        <p className="text-white/60 max-w-sm">
+          {allFailed
+            ? `All ${progress.total} illustrations failed to generate.`
+            : 'Image generation hit an error.'}
+        </p>
+        {progress.errorMessage && (
+          <p className="text-white/40 text-xs max-w-md break-words">
+            {progress.errorMessage.slice(0, 200)}
+          </p>
+        )}
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={() => {
+              setStatus('generating')
+              setProgress({ done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '' })
+            }}
+            className="bg-accent text-white font-bold px-6 py-3 rounded-xl border-4 border-white"
+          >
+            Retry
+          </button>
+          <button onClick={() => router.push('/wizard')} className="bg-primary text-white font-bold px-6 py-3 rounded-xl border-4 border-white">
+            New Story
+          </button>
+        </div>
       </div>
     )
   }

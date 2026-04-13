@@ -1,4 +1,5 @@
 import { ArtStyle, ImageQuality } from '@/types'
+import { STYLE_PREFIXES } from './index'
 
 // ---------------------------------------------------------------------------
 // Multi-provider image generation router
@@ -111,6 +112,55 @@ async function generateWithOpenAI(prompt: string, quality: ImageQuality): Promis
 // ---------------------------------------------------------------------------
 
 const RECRAFT_URL = 'https://external.api.recraft.ai/v1/images/generations'
+const RECRAFT_MAX_PROMPT = 1000
+
+// Condense a prompt to fit Recraft's 1000-char limit by trimming throughout
+// while preserving the essence (character description + scene action).
+function condenseForRecraft(prompt: string): string {
+  let text = prompt
+
+  // 1. Strip style prefix — Recraft gets style from style/substyle API params
+  for (const prefix of Object.values(STYLE_PREFIXES)) {
+    if (text.startsWith(prefix)) {
+      text = text.slice(prefix.length).trim()
+      break
+    }
+  }
+
+  // 2. Remove "no text" instructions — Recraft doesn't render text
+  text = text.replace(/,?\s*[Nn]o text or words in the image\.?/g, '')
+  text = text.replace(/,?\s*[Nn]o text in the image\.?/g, '')
+
+  // 3. Remove filler adverbs
+  text = text.replace(/\b(very|really|extremely|quite|absolutely|incredibly)\s+/gi, '')
+
+  // 4. Shorten verbose phrases
+  text = text
+    .replace(/\bstanding in a\b/g, 'in a')
+    .replace(/\ba pair of\b/g, '')
+    .replace(/\bwith a sense of\b/g, 'with')
+    .replace(/\bthat hints at the adventure\b/g, '')
+    .replace(/\bthat is happening\b/g, '')
+    .replace(/\bin the background\b/g, 'behind')
+    .replace(/\bin the foreground\b/g, 'in front')
+    .replace(/\bcan be seen\b/g, '')
+    .replace(/\bthere is a\b/g, 'a')
+    .replace(/\bthere are\b/g, '')
+
+  // 5. Remove parenthetical asides
+  text = text.replace(/\s*\([^)]{0,80}\)/g, '')
+
+  // 6. Collapse whitespace
+  text = text.replace(/\s{2,}/g, ' ').replace(/\s+\./g, '.').replace(/,\s*,/g, ',').trim()
+
+  // 7. If still over limit, preserve both ends (character desc + scene action)
+  if (text.length > RECRAFT_MAX_PROMPT) {
+    const half = Math.floor((RECRAFT_MAX_PROMPT - 1) / 2)
+    text = text.slice(0, half) + ' ' + text.slice(text.length - half)
+  }
+
+  return text.slice(0, RECRAFT_MAX_PROMPT)
+}
 
 const RECRAFT_SUBSTYLE_MAP: Partial<Record<ArtStyle, string>> = {
   'classic-watercolor': 'watercolor',
@@ -118,8 +168,9 @@ const RECRAFT_SUBSTYLE_MAP: Partial<Record<ArtStyle, string>> = {
 }
 
 async function generateWithRecraft(prompt: string, style: ArtStyle, _quality: ImageQuality): Promise<Buffer> {
+  const condensedPrompt = condenseForRecraft(prompt)
   const body: Record<string, unknown> = {
-    prompt,
+    prompt: condensedPrompt,
     style: 'digital_illustration',
     n: 1,
     size: '1024x1024',

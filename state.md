@@ -11,20 +11,15 @@ Phase 1 MVP is complete and live. Now wiring up multiple image generation provid
 ### Phase 2a Tasks
 
 - [x] Build style router in `lib/ai/generate-image.ts` — maps `art_style` to provider + config
-- [ ] Integrate Recraft V4 API (flat illustration, watercolor, collage, bold & modern)
-- [ ] Integrate fal.ai API for FLUX.2 Pro (storybook realism) + FLUX.1 Kontext (character consistency)
-- [ ] Integrate Google Nano Banana 2 as free-tier fallback
-- [ ] Update wizard art style options from 5 generic styles to 8 book-inspired aesthetics:
-  1. Comic Book (Dog Man / Captain Underpants) → OpenAI
-  2. Classic Watercolor (Peter Rabbit / The Gruffalo) → Recraft V4
-  3. Collage / Paper Cutout (The Very Hungry Caterpillar) → Recraft V4
-  4. Whimsical Ink (Roald Dahl / Quentin Blake) → OpenAI
-  5. Bold & Modern (Pete the Cat / Oliver Jeffers) → Recraft V4
-  6. Soft & Cozy (Goodnight Moon) → OpenAI
-  7. Anime / Ghibli (Studio Ghibli / Totoro) → fal.ai FLUX + LoRA
-  8. Storybook Realism (The Polar Express) → fal.ai FLUX.2 Pro
-- [ ] Update `STYLE_PREFIXES` map and `ArtStyle` type for new aesthetics
-- [ ] Add new env vars to `.env.local` and Vercel: `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
+- [x] Integrate Recraft V4 API (classic watercolor, paper collage, bold & modern)
+- [x] Integrate fal.ai API for FLUX.2 Pro (storybook realism, anime/ghibli)
+- [x] Integrate Google Gemini as free-tier fallback
+- [x] Update wizard art style options to 8 book-inspired aesthetics
+- [x] Update `STYLE_PREFIXES` map and `ArtStyle` type for new aesthetics
+- [x] Add new env vars to `.env.local`: `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
+- [x] Fix Recraft 1000-char prompt limit (smart condensing function)
+- [x] Fix generating page: show error + retry when all images fail
+- [ ] Add new env vars to Vercel
 - [ ] Test each aesthetic end-to-end and deploy
 
 ---

@@ -45,7 +45,7 @@ STORY INPUTS:
 - Genre: ${form.genre}
 - Lesson: ${form.lesson}
 - Setting: ${form.setting}
-- Supporting characters: ${companions}
+- Supporting characters: ${companions}${form.companion_name ? ` (named: ${form.companion_name})` : ''}
 - Tone: ${form.tone}
 - Reading level: ${tier.name} — ${tier.style}
 

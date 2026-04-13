@@ -29,6 +29,7 @@ const defaultData: WizardFormData = {
   lesson: 'Bravery',
   setting: 'Enchanted Forest',
   supporting_characters: '',
+  companion_name: '',
   art_style: 'comic-book',
   tone: 'adventurous',
   length: 'medium',

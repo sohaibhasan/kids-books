@@ -60,6 +60,7 @@ export interface WizardFormData {
   lesson: string
   setting: string
   supporting_characters: string
+  companion_name: string
   // Step 3 - Style
   art_style: ArtStyle
   tone: 'silly' | 'heartfelt' | 'adventurous'

@@ -39,6 +39,10 @@ const OUTFITS = [
   { value: 'a yellow superhero cape over a blue t-shirt, red shorts, and black boots', label: 'Superhero Cape', icon: '🦸' },
   { value: 'a cozy orange sweater with a pumpkin on it, dark blue leggings, and brown ankle boots', label: 'Cozy Sweater', icon: '🎃' },
   { value: 'a white lab coat over a light blue shirt, gray pants, and big round goggles on their head', label: 'Scientist', icon: '🔬' },
+  { value: 'a puffy navy winter coat with a fuzzy hood, a red knit scarf, gray snow pants, and warm brown boots', label: 'Winter Coat', icon: '🧣' },
+  { value: 'a bright yellow tank top with a sun print, turquoise swim shorts, and blue flip-flops', label: 'Summer Fun', icon: '🏖️' },
+  { value: 'a shiny yellow rain jacket with big buttons, dark green rain pants, and red rubber rain boots', label: 'Rainy Day', icon: '🌧️' },
+  { value: 'a red-and-black plaid flannel shirt, olive cargo pants, and tan hiking boots with thick soles', label: 'Fall Flannel', icon: '🍂' },
 ]
 
 export default function StepChild({ data, onChange }: Props) {
