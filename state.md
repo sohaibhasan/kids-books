@@ -4,11 +4,11 @@ Last updated: 2026-04-12
 
 ---
 
-## Current Phase: Phase 2a — Multi-Provider Image Generation
+## Current Phase: Phase 2b — Story Polish + UX
 
-Phase 1 MVP is complete and live. Now wiring up multiple image generation providers so each art style routes to the provider that produces the best results for that aesthetic. See `docs/image-gen-options.md` for full research.
+Phase 2a complete and live. All 8 art aesthetics are wired to their providers and deployed.
 
-### Phase 2a Tasks
+### Phase 2a Tasks ✅ Complete
 
 - [x] Build style router in `lib/ai/generate-image.ts` — maps `art_style` to provider + config
 - [x] Integrate Recraft V4 API (classic watercolor, paper collage, bold & modern)
@@ -19,8 +19,8 @@ Phase 1 MVP is complete and live. Now wiring up multiple image generation provid
 - [x] Add new env vars to `.env.local`: `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
 - [x] Fix Recraft 1000-char prompt limit (smart condensing function)
 - [x] Fix generating page: show error + retry when all images fail
-- [ ] Add new env vars to Vercel
-- [ ] Test each aesthetic end-to-end and deploy
+- [x] Add new env vars to Vercel: `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
+- [x] Deploy to production — https://kidsbooks-eight.vercel.app
 
 ---
 
