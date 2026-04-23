@@ -42,14 +42,15 @@ app/
   api/stories/route.ts            ← POST: Claude story gen → story.json
   api/stories/[slug]/images/route.ts  ← GET SSE: HF image gen → page-XX.png
 components/
-  wizard/WizardContainer.tsx      ← Wizard state + navigation
-  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepReview
+  wizard/WizardContainer.tsx      ← Wizard state + navigation (7 steps)
+  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepReview
   reader/StoryReader.tsx          ← Page-by-page reader client component
   ui/                             ← Button, Input, SelectCard
 lib/
-  ai/generate-story.ts            ← Claude API call, age-tier vocab, JSON output
+  ai/generate-story.ts            ← Claude API call, age-tier vocab, writing voice + depth injection, JSON output
   ai/generate-image.ts            ← HF FLUX API call, returns Buffer
   ai/index.ts                     ← STYLE_PREFIXES map per ArtStyle
+  ai/writing-styles.ts            ← WRITING_STYLE_VOICES, TONE_META, DEPTH_MODIFIERS
   utils/slug.ts                   ← makeSlug()
 types/index.ts                    ← WizardFormData, Story, Page, ArtStyle, etc.
 public/generated/[slug]/          ← story.json + page-XX.png (gitignored)
@@ -134,6 +135,26 @@ GET    /api/stories/[slug]/images       → SSE stream: generates images via Ope
 
 See `docs/image-gen-options.md` for full research, provider comparison, and integration notes.
 
+## Writing Voice
+
+**Architecture:** In addition to the per-story art aesthetic, the wizard collects a **writing voice** (craft-descriptor preset), a **tone**, and optional **depth modifiers**. All three get injected into the Claude story-gen prompt in `lib/ai/generate-story.ts`. Voice shapes sentence-level craft; tone modulates mood; depth modifiers push toward richer storytelling techniques.
+
+**8 Writing voice presets** (see `lib/ai/writing-styles.ts`):
+1. Rhyming & Playful — anapestic rhyme, invented compounds, refrains
+2. Gentle & Pastoral — formal old-fashioned vocabulary, quiet stakes
+3. Deadpan & Quirky — sparse dialogue, comic timing
+4. Lyrical & Imaginative — rhythmic prose, big feelings, there-and-back shape (default)
+5. Mischievous & Bold — inventive wordplay, clever kid triumphs
+6. Warm & Contemplative — cozy, friendship-focused, kid-level philosophy
+7. Vocab-Stretching — rich words with in-line definitions, ironic narrator
+8. Sensory & Repetitive — short rhythmic sentences, cumulative patterns
+
+**6 Tones:** silly, heartfelt, adventurous, spooky-but-safe, bittersweet, hopeful.
+
+**4 Depth modifiers** (opt-in, multi-select): plot-twist, sensory-rich, vocab-stretch, character-arc. Each appends a specific directive to the Claude prompt.
+
+The `scene_description` (image prompts) is NOT affected by writing voice — voice only shapes text_content.
+
 ### Prompt Structure
 
 Every scene prompt must include three things in order:
@@ -184,7 +205,8 @@ npm run build
 ## Development Phases
 
 - **Phase 1 (MVP)** ✅ Complete — Wizard → Claude story gen → OpenAI images → Supabase → Vercel. Character consistency via structured fields + character sheets.
-- **Phase 2a (In Progress)** — Multi-provider image routing: 8 book-inspired art aesthetics, each routed to best provider (OpenAI, Recraft, fal.ai/FLUX, Google free tier). Update wizard with new styles.
-- **Phase 2b** — Storyboard editor, FLUX.1 Kontext character consistency upgrade, read-aloud, night mode
+- **Phase 2a** ✅ Complete — Multi-provider image routing: 8 book-inspired art aesthetics, each routed to best provider (OpenAI, Recraft, fal.ai/FLUX, Google free tier). Wizard UI exposes all 8 styles (`components/wizard/steps/StepStyle.tsx`). End-to-end testing complete across all provider routes.
+- **Phase 2b.1** ✅ Complete — Story variety & depth: 8 writing-voice presets, 6 tones, 4 optional depth modifiers (plot-twist, sensory-rich, vocab-stretch, character-arc). New `StepVoice` wizard step + `lib/ai/writing-styles.ts`.
+- **Phase 2b (remaining)** — Storyboard editor, FLUX.1 Kontext character consistency upgrade, read-aloud, night mode, narrative structure presets, POV selector, bilingual output
 - **Phase 3** — User accounts, story library, age-tier vocabulary, bilingual support
 - **Phase 4** — Stripe payments, subscriptions, print-on-demand, classroom accounts

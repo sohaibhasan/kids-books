@@ -9,10 +9,11 @@ import StepGenre from './steps/StepGenre'
 import StepTheme from './steps/StepTheme'
 import StepSetting from './steps/StepSetting'
 import StepStyle from './steps/StepStyle'
+import StepVoice from './steps/StepVoice'
 import StepReview from './steps/StepReview'
 import Button from '@/components/ui/Button'
 
-const TOTAL_STEPS = 6
+const TOTAL_STEPS = 7
 
 const defaultData: WizardFormData = {
   child_name: '',
@@ -31,8 +32,10 @@ const defaultData: WizardFormData = {
   supporting_characters: '',
   companion_name: '',
   art_style: 'comic-book',
-  tone: 'adventurous',
   length: 'medium',
+  writing_style: 'lyrical-imaginative',
+  tone: 'adventurous',
+  depth_modifiers: [],
   image_quality: 'standard',
   language: 'English',
 }
@@ -43,6 +46,7 @@ function canAdvance(step: number, data: WizardFormData): boolean {
   if (step === 2) return !!data.genre
   if (step === 3) return !!data.lesson
   if (step === 4) return !!data.setting
+  if (step === 6) return !!data.writing_style && !!data.tone
   return true
 }
 
@@ -84,6 +88,7 @@ export default function WizardContainer() {
     <StepTheme key="theme" data={data} onChange={update} />,
     <StepSetting key="setting" data={data} onChange={update} />,
     <StepStyle key="style" data={data} onChange={update} />,
+    <StepVoice key="voice" data={data} onChange={update} />,
     <StepReview key="review" data={data} />,
   ]
 

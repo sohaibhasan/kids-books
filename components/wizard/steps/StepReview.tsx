@@ -1,6 +1,7 @@
 'use client'
 
 import { WizardFormData } from '@/types'
+import { DEPTH_MODIFIERS, TONE_META, WRITING_STYLE_VOICES } from '@/lib/ai/writing-styles'
 
 interface Props {
   data: WizardFormData
@@ -37,7 +38,11 @@ export default function StepReview({ data }: Props) {
         <Row label="Setting" value={data.setting} />
         <Row label="Companions" value={companions} />
         <Row label="Art style" value={data.art_style} />
-        <Row label="Tone" value={data.tone} />
+        <Row label="Writing voice" value={data.writing_style ? WRITING_STYLE_VOICES[data.writing_style].label : '—'} />
+        <Row label="Tone" value={data.tone ? TONE_META[data.tone].label : '—'} />
+        {data.depth_modifiers && data.depth_modifiers.length > 0 && (
+          <Row label="Depth" value={data.depth_modifiers.map(k => DEPTH_MODIFIERS[k].label).join(', ')} />
+        )}
         <Row label="Length" value={data.length} />
       </div>
 

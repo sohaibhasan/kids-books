@@ -19,12 +19,6 @@ const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: s
   { value: 'storybook-realism',  icon: '🎭', label: 'Storybook Realism',  description: 'Painterly detail, dramatic lighting' },
 ]
 
-const TONES: { value: WizardFormData['tone']; icon: string; label: string }[] = [
-  { value: 'silly',       icon: '😂', label: 'Silly' },
-  { value: 'heartfelt',   icon: '🥰', label: 'Heartfelt' },
-  { value: 'adventurous', icon: '⚡', label: 'Adventurous' },
-]
-
 const LENGTHS: { value: WizardFormData['length']; icon: string; label: string; pages: string }[] = [
   { value: 'short',  icon: '📄', label: 'Short',  pages: '~5 pages' },
   { value: 'medium', icon: '📖', label: 'Medium', pages: '~10 pages' },
@@ -55,21 +49,6 @@ export default function StepStyle({ data, onChange }: Props) {
               description={s.description}
               selected={data.art_style === s.value}
               onClick={() => onChange({ art_style: s.value })}
-            />
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <label className="text-base font-semibold text-ink">Tone</label>
-        <div className="grid grid-cols-3 gap-3">
-          {TONES.map(t => (
-            <SelectCard
-              key={t.value}
-              icon={t.icon}
-              label={t.label}
-              selected={data.tone === t.value}
-              onClick={() => onChange({ tone: t.value })}
             />
           ))}
         </div>

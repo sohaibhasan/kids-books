@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { WizardFormData } from '@/types'
 import { STYLE_PREFIXES } from './index'
+import { DEPTH_MODIFIERS, TONE_DESCRIPTIONS, WRITING_STYLE_VOICES } from './writing-styles'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -21,6 +22,11 @@ export async function generateStory(form: WizardFormData): Promise<{ title: stri
   const tier      = getAgeTier(form.child_age)
   const pageCount = getPageCount(form.length)
   const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['comic-book']
+  const voice       = WRITING_STYLE_VOICES[form.writing_style] ?? WRITING_STYLE_VOICES['lyrical-imaginative']
+  const toneDescription = TONE_DESCRIPTIONS[form.tone] ?? TONE_DESCRIPTIONS['adventurous']
+  const depthDirectives = (form.depth_modifiers ?? [])
+    .map(k => DEPTH_MODIFIERS[k]?.directive)
+    .filter(Boolean)
   const companions  = form.supporting_characters
     ? form.supporting_characters.split(',').filter(Boolean).join(', ')
     : 'none'
@@ -36,6 +42,10 @@ export async function generateStory(form: WizardFormData): Promise<{ title: stri
   const appearanceDesc = appearanceParts.length > 0 ? appearanceParts.join(', ') : 'not specified'
   const outfitDesc = form.outfit || 'a colorful casual outfit'
 
+  const depthBlock = depthDirectives.length > 0
+    ? depthDirectives.map(d => `- ${d}`).join('\n')
+    : '- (none — keep the story simple and direct)'
+
   const prompt = `You are a beloved children's storybook author. Create a complete illustrated storybook.
 
 STORY INPUTS:
@@ -46,8 +56,15 @@ STORY INPUTS:
 - Lesson: ${form.lesson}
 - Setting: ${form.setting}
 - Supporting characters: ${companions}${form.companion_name ? ` (named: ${form.companion_name})` : ''}
-- Tone: ${form.tone}
+- Writing voice: ${voice.label}
+- Tone: ${form.tone} — ${toneDescription}
 - Reading level: ${tier.name} — ${tier.style}
+
+WRITING VOICE (apply to every page's text_content — this is the single most important craft instruction, it overrides any generic default style):
+${voice.voice_prompt}
+
+DEPTH DIRECTIVES (apply across the full story):
+${depthBlock}
 
 Generate exactly ${pageCount + 2} pages: 1 cover (page_number 0, type "cover") + ${pageCount} story pages (page_number 1..${pageCount}) + 1 end page (page_number ${pageCount + 1}, type "end").
 

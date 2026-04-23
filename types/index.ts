@@ -1,6 +1,17 @@
 export type AgeTier = 'tiny' | 'early' | 'growing' | 'independent'
 export type Genre = 'fantasy' | 'adventure' | 'sci-fi' | 'nature' | 'fairy-tale' | 'everyday' | 'mystery' | 'humor'
 export type ArtStyle = 'comic-book' | 'classic-watercolor' | 'paper-collage' | 'whimsical-ink' | 'bold-modern' | 'soft-cozy' | 'anime-ghibli' | 'storybook-realism'
+export type WritingStyle =
+  | 'rhyming-playful'
+  | 'gentle-pastoral'
+  | 'deadpan-quirky'
+  | 'lyrical-imaginative'
+  | 'mischievous-bold'
+  | 'warm-contemplative'
+  | 'vocab-stretching'
+  | 'sensory-repetitive'
+export type Tone = 'silly' | 'heartfelt' | 'adventurous' | 'spooky-but-safe' | 'bittersweet' | 'hopeful'
+export type DepthModifier = 'plot-twist' | 'sensory-rich' | 'vocab-stretch' | 'character-arc'
 export type ImageQuality = 'standard' | 'high'
 export type PageLayout = 'full-bleed' | 'text-left' | 'text-right' | 'text-overlay'
 export type StoryStatus = 'draft' | 'generating' | 'published'
@@ -63,8 +74,11 @@ export interface WizardFormData {
   companion_name: string
   // Step 3 - Style
   art_style: ArtStyle
-  tone: 'silly' | 'heartfelt' | 'adventurous'
   length: 'short' | 'medium' | 'long'
+  // Step - Writing voice
+  writing_style: WritingStyle
+  tone: Tone
+  depth_modifiers: DepthModifier[]
   // Image quality
   image_quality: ImageQuality
   // Extras
