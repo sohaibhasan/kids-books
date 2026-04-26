@@ -199,7 +199,8 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 ## Deployment
 
 **Vercel (primary):** https://kidsbooks-eight.vercel.app
-- Deploy: `~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/bin/vercel --prod --yes`
+- **Auto-deploy:** push to `main` → Vercel builds and promotes to production. Push to any other branch → preview deployment. (Connected via the Vercel GitHub App.)
+- **Manual fallback:** `~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/bin/vercel --prod --yes`
 - Env vars: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `HF_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
 
 **GitHub Pages (static story shares):** https://sohaibhasan.github.io/kids-books/
