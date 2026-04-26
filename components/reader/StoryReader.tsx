@@ -1,12 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import IconButton from '@/components/ui/IconButton'
+import Button from '@/components/ui/Button'
+import { readerPageVariants } from '@/lib/motion'
+import ReaderChrome from './ReaderChrome'
+import Scrubber from './Scrubber'
+import SharePopover from './SharePopover'
 
 interface Page {
   page_number: number
   type?: string
   text_content: string
+  scene_description?: string
   illustration_url: string
 }
 
@@ -16,123 +25,177 @@ interface Props {
   slug: string
 }
 
-function formatText(text: string, type?: string) {
-  if (type === 'cover') {
-    return <h1 className="text-2xl font-bold text-center text-white leading-tight">{text}</h1>
+export default function StoryReader({ title, pages }: Props) {
+  const [current, setCurrent] = useState(0)
+  const directionRef = useRef(1)
+  const reduce = useReducedMotion()
+
+  const goTo = (idx: number) => {
+    const target = Math.max(0, Math.min(idx, pages.length - 1))
+    directionRef.current = target > current ? 1 : -1
+    setCurrent(target)
   }
-  if (type === 'end') {
-    const lines = text.split('\n').filter(l => l.trim())
-    return (
-      <div className="text-center space-y-3">
-        <p className="text-3xl font-bold text-accent" style={{ textShadow: '2px 2px 0 #e63946' }}>{lines[0]}</p>
-        {lines[1] && <p className="text-xs uppercase tracking-widest text-white/40">{lines[1]}</p>}
-        {lines[2] && <p className="text-lg italic text-white/80 leading-relaxed">{lines[2]}</p>}
-      </div>
-    )
-  }
+  const next = () => goTo(current + 1)
+  const prev = () => goTo(current - 1)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); next() }
+      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); prev() }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [current]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const page = pages[current]
+  if (!page) return null
+
+  const isCover = page.type === 'cover'
+  const isEnd = page.type === 'end'
+  const storyPageCount = pages.filter((p) => !p.type).length
+  const storyPageIndex = pages.slice(0, current + 1).filter((p) => !p.type).length
+
+  const pageLabel = isCover ? 'Cover' : isEnd ? 'The End' : `Page ${storyPageIndex} of ${storyPageCount}`
+
   return (
-    <div className="space-y-3">
-      {text.split('\n\n').map((para, i) => (
-        <p key={i} className="text-lg leading-relaxed text-ink font-medium">{para}</p>
-      ))}
+    <div className="relative min-h-dvh bg-night text-white overflow-hidden">
+      {/* Soft atmospheric blobs */}
+      <div
+        aria-hidden
+        className="absolute -top-40 -left-40 size-[480px] rounded-full opacity-30 blur-3xl pointer-events-none"
+        style={{ background: 'radial-gradient(circle, var(--brand), transparent 70%)' }}
+      />
+      <div
+        aria-hidden
+        className="absolute -bottom-40 -right-40 size-[480px] rounded-full opacity-25 blur-3xl pointer-events-none"
+        style={{ background: 'radial-gradient(circle, var(--accent), transparent 70%)' }}
+      />
+
+      <ReaderChrome pageLabel={pageLabel} share={<SharePopover title={title} />} />
+
+      <main className="relative min-h-dvh flex items-center justify-center px-4 sm:px-8 py-20">
+        {/* Prev / Next chevrons (desktop) */}
+        <div className="hidden md:flex absolute left-4 inset-y-0 items-center z-20">
+          <IconButton
+            variant="glass"
+            size="lg"
+            label="Previous page"
+            icon={<ChevronLeft />}
+            onClick={prev}
+            disabled={current === 0}
+          />
+        </div>
+        <div className="hidden md:flex absolute right-4 inset-y-0 items-center z-20">
+          <IconButton
+            variant="glass"
+            size="lg"
+            label="Next page"
+            icon={<ChevronRight />}
+            onClick={next}
+            disabled={current === pages.length - 1}
+          />
+        </div>
+
+        {/* Page area */}
+        <div className="relative w-full max-w-2xl">
+          <AnimatePresence mode="wait" custom={directionRef.current} initial={false}>
+            <motion.div
+              key={current}
+              custom={directionRef.current}
+              variants={readerPageVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              drag={reduce ? false : 'x'}
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.18}
+              onDragEnd={(_, info) => {
+                if (info.offset.x < -80) next()
+                else if (info.offset.x > 80) prev()
+              }}
+              className="touch-pan-y"
+            >
+              {isCover ? (
+                <CoverLayout title={title} url={page.illustration_url} alt={page.scene_description} />
+              ) : isEnd ? (
+                <EndLayout text={page.text_content} url={page.illustration_url} alt={page.scene_description} />
+              ) : (
+                <StoryLayout text={page.text_content} url={page.illustration_url} alt={page.scene_description} />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Mobile prev/next floats */}
+        <div className="md:hidden fixed inset-x-4 bottom-20 flex justify-between z-30 pointer-events-none">
+          <div className="pointer-events-auto">
+            <IconButton variant="glass" size="lg" label="Previous page" icon={<ChevronLeft />} onClick={prev} disabled={current === 0} />
+          </div>
+          <div className="pointer-events-auto">
+            <IconButton variant="glass" size="lg" label="Next page" icon={<ChevronRight />} onClick={next} disabled={current === pages.length - 1} />
+          </div>
+        </div>
+      </main>
+
+      <Scrubber pages={pages} current={current} onSelect={goTo} />
     </div>
   )
 }
 
-export default function StoryReader({ title, pages, slug }: Props) {
-  const [current, setCurrent] = useState(0)
-  const page = pages[current]
-  const isEnd  = page?.type === 'end'
-  const isCover = page?.type === 'cover'
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') setCurrent(c => Math.min(c + 1, pages.length - 1))
-      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   setCurrent(c => Math.max(c - 1, 0))
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [pages.length])
-
-  if (!page) return null
-
+function CoverLayout({ title, url, alt }: { title: string; url: string; alt?: string }) {
   return (
-    <div className="min-h-screen bg-navy flex flex-col items-center justify-start px-4 py-8 gap-6">
-
-      {/* Top bar */}
-      <div className="flex w-full max-w-xl items-center justify-between">
-        <Link href="/" className="text-white/40 hover:text-white text-sm font-medium transition-colors">← Home</Link>
-        <span className="text-white/30 text-xs font-medium tracking-wider uppercase">
-          {isCover ? 'Cover' : isEnd ? 'The End' : `Page ${current} of ${pages.length - 2}`}
-        </span>
-        <button
-          onClick={() => navigator.clipboard.writeText(window.location.href)}
-          className="text-white/40 hover:text-accent text-sm font-medium transition-colors"
-        >
-          Share 🔗
-        </button>
-      </div>
-
-      {/* Book card */}
-      <div className="w-full max-w-xl bg-white rounded-3xl border-4 border-ink overflow-hidden shadow-[6px_6px_0_#ffd700]">
-
-        {/* Illustration */}
+    <div className="rounded-xl overflow-hidden shadow-xl bg-night-soft">
+      <div className="relative">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={page.illustration_url}
-          alt={`Illustration for page ${page.page_number}`}
-          className="w-full object-cover border-b-4 border-ink"
-          style={{ aspectRatio: '1 / 1' }}
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
-
-        {/* Text */}
-        <div className={`p-6 ${isCover ? 'bg-navy' : isEnd ? 'bg-navy' : 'bg-cream'}`}>
-          {formatText(page.text_content, page.type)}
+        <img src={url} alt={alt || ''} className="w-full aspect-square object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+          <div className="inline-flex items-center gap-2 mb-3 px-3 h-7 rounded-pill bg-white/15 backdrop-blur text-white text-[11px] font-semibold uppercase tracking-widest">
+            <Sparkles className="size-3.5" />
+            A Storybook Studio Original
+          </div>
+          <h1 className="font-display text-3xl sm:text-5xl text-white leading-tight">{title}</h1>
         </div>
       </div>
+    </div>
+  )
+}
 
-      {/* Navigation */}
-      <div className="flex items-center gap-4 w-full max-w-xl justify-between">
-        <button
-          onClick={() => setCurrent(c => Math.max(c - 1, 0))}
-          disabled={current === 0}
-          className="bg-white text-ink font-bold px-5 py-3 rounded-xl border-4 border-ink shadow-[3px_3px_0_#1a1a1a]
-                     disabled:opacity-30 disabled:shadow-none hover:bg-gray-50 transition-all"
-        >
-          ← Back
-        </button>
+function StoryLayout({ text, url, alt }: { text: string; url: string; alt?: string }) {
+  return (
+    <article className="rounded-xl overflow-hidden bg-surface-raised text-ink shadow-xl" aria-live="polite">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt={alt || ''} className="w-full aspect-square object-cover" />
+      <div className="px-6 py-7 sm:px-10 sm:py-10 font-display text-[18px] sm:text-[19px] leading-[1.75] text-ink space-y-4 max-w-[60ch] mx-auto">
+        {text.split('\n\n').map((para, i) => (
+          <p key={i} className={i === 0 ? 'drop-cap' : ''}>{para}</p>
+        ))}
+      </div>
+    </article>
+  )
+}
 
-        {/* Dot indicators */}
-        <div className="flex gap-1.5 flex-wrap justify-center max-w-[60%]">
-          {pages.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrent(i)}
-              className={`rounded-full border-2 border-white/20 transition-all duration-200 ${
-                i === current ? 'bg-accent w-4 h-4 border-accent' : 'bg-white/20 w-2.5 h-2.5'
-              }`}
-            />
-          ))}
-        </div>
-
-        {isEnd ? (
-          <Link
-            href="/wizard"
-            className="bg-accent text-ink font-bold px-5 py-3 rounded-xl border-4 border-ink shadow-[3px_3px_0_#1a1a1a] text-sm whitespace-nowrap"
-          >
-            New Story ✨
-          </Link>
-        ) : (
-          <button
-            onClick={() => setCurrent(c => Math.min(c + 1, pages.length - 1))}
-            disabled={current === pages.length - 1}
-            className="bg-primary text-white font-bold px-5 py-3 rounded-xl border-4 border-ink shadow-[3px_3px_0_#ffd700]
-                       disabled:opacity-30 disabled:shadow-none hover:bg-primary-dark transition-all"
-          >
-            Next →
-          </button>
+function EndLayout({ text, url, alt }: { text: string; url: string; alt?: string }) {
+  const lines = text.split('\n').filter((l) => l.trim())
+  return (
+    <div className="rounded-xl overflow-hidden bg-night-soft text-white shadow-xl">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={url} alt={alt || ''} className="w-full aspect-square object-cover opacity-90" />
+      <div className="px-6 py-10 text-center space-y-4">
+        <p className="font-display text-4xl sm:text-5xl text-accent">{lines[0] || 'The End'}</p>
+        {lines[1] && (
+          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{lines[1]}</p>
         )}
+        {lines[2] && (
+          <p className="font-display italic text-lg text-white/85 max-w-md mx-auto leading-relaxed">{lines[2]}</p>
+        )}
+        <div className="pt-4 flex gap-3 justify-center">
+          <Link href="/wizard">
+            <Button variant="accent" iconRight={<Sparkles className="size-4" />}>
+              Write another
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   )

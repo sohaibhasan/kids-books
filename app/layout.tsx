@@ -1,11 +1,25 @@
 import type { Metadata } from 'next'
-import { Fredoka } from 'next/font/google'
+import { Fraunces, Inter, Fredoka } from 'next/font/google'
 import './globals.css'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  display: 'swap',
+  axes: ['SOFT', 'WONK', 'opsz'],
+})
 
 const fredoka = Fredoka({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600'],
   variable: '--font-fredoka',
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -16,7 +30,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${fredoka.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} ${fredoka.variable} font-sans antialiased`}>
         {children}
       </body>
     </html>

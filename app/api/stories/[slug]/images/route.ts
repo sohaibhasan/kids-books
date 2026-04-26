@@ -59,7 +59,14 @@ export async function GET(
 
           if (existing && existing.length > 0) {
             successCount++
-            send({ type: 'progress', page: page.page_number, total: pages.length, cached: true })
+            const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename)
+            send({
+              type: 'progress',
+              page: page.page_number,
+              total: pages.length,
+              cached: true,
+              url: pub.publicUrl,
+            })
             continue
           }
 
@@ -73,7 +80,13 @@ export async function GET(
             if (uploadError) throw uploadError
 
             successCount++
-            send({ type: 'progress', page: page.page_number, total: pages.length })
+            const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename)
+            send({
+              type: 'progress',
+              page: page.page_number,
+              total: pages.length,
+              url: pub.publicUrl,
+            })
           } catch (err) {
             console.error(`[images ${slug} page ${page.page_number}]`, err)
             const message =

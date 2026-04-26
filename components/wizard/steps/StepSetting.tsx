@@ -3,6 +3,7 @@
 import SelectCard from '@/components/ui/SelectCard'
 import Input from '@/components/ui/Input'
 import { WizardFormData } from '@/types'
+import StepHeader from '../StepHeader'
 
 interface Props {
   data: WizardFormData
@@ -36,57 +37,67 @@ export default function StepSetting({ data, onChange }: Props) {
 
   const toggleCompanion = (value: string) => {
     const updated = companions.includes(value)
-      ? companions.filter(c => c !== value)
+      ? companions.filter((c) => c !== value)
       : [...companions, value]
     onChange({ supporting_characters: updated.join(',') })
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h2 className="text-2xl font-bold text-ink mb-1">Build the world</h2>
-        <p className="text-ink/60">Where does the story take place, and who comes along?</p>
-      </div>
+    <div>
+      <StepHeader
+        eyebrow="Build the world"
+        title="Where does it all happen?"
+        description="Pick the setting and any companions along for the ride."
+      />
 
-      <div className="flex flex-col gap-3">
-        <label className="text-base font-semibold text-ink">Setting</label>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {SETTINGS.map(s => (
-            <SelectCard
-              key={s.value}
-              icon={s.icon}
-              label={s.label}
-              selected={data.setting === s.value}
-              onClick={() => onChange({ setting: s.value })}
-            />
-          ))}
+      <div className="space-y-10">
+        <div>
+          <p className="text-sm font-medium text-ink mb-3">Setting</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {SETTINGS.map((s) => (
+              <SelectCard
+                key={s.value}
+                icon={s.icon}
+                label={s.label}
+                tone="sage"
+                selected={data.setting === s.value}
+                onClick={() => onChange({ setting: s.value })}
+              />
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-3">
-        <label className="text-base font-semibold text-ink">
-          Supporting characters <span className="text-ink/40 font-normal">(pick any)</span>
-        </label>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {COMPANIONS.map(c => (
-            <SelectCard
-              key={c.value}
-              icon={c.icon}
-              label={c.label}
-              selected={companions.includes(c.value)}
-              onClick={() => toggleCompanion(c.value)}
-              size="sm"
-            />
-          ))}
+        <div>
+          <p className="text-sm font-medium text-ink mb-1">
+            Supporting characters{' '}
+            <span className="text-ink-muted font-normal">— pick any</span>
+          </p>
+          <p className="text-sm text-ink-muted mb-3">Optional company for your hero.</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {COMPANIONS.map((c) => (
+              <SelectCard
+                key={c.value}
+                icon={c.icon}
+                label={c.label}
+                tone="sky"
+                multi
+                size="sm"
+                selected={companions.includes(c.value)}
+                onClick={() => toggleCompanion(c.value)}
+              />
+            ))}
+          </div>
+          {companions.length > 0 && (
+            <div className="mt-5">
+              <Input
+                label="Give them a name (optional)"
+                placeholder="e.g. Luna, Captain Whiskers"
+                value={data.companion_name}
+                onChange={(v) => onChange({ companion_name: v })}
+              />
+            </div>
+          )}
         </div>
-        {companions.length > 0 && (
-          <Input
-            label="Give them a name (optional)"
-            placeholder="e.g. Luna, Captain Whiskers"
-            value={data.companion_name}
-            onChange={v => onChange({ companion_name: v })}
-          />
-        )}
       </div>
     </div>
   )

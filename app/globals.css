@@ -1,27 +1,185 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #e63946;
-  --primary-dark: #c1121f;
-  --accent: #ffd700;
-  --accent-dark: #e6c200;
-  --navy: #1a1a2e;
-  --cream: #fef9f0;
-  --ink: #1a1a1a;
+  /* Surfaces */
+  --surface:        #FBF7F2;
+  --surface-raised: #FFFFFF;
+  --surface-sunken: #F2EDE5;
+
+  /* Ink */
+  --ink:       #1F1B16;
+  --ink-soft:  #5C544A;
+  --ink-muted: #9A9088;
+
+  /* Borders */
+  --border:        #E8E1D5;
+  --border-strong: #1F1B16;
+
+  /* Brand — softened coral */
+  --brand:      #E85D4E;
+  --brand-deep: #C73D2E;
+  --brand-tint: #FFE9E5;
+
+  /* Accent — warm honey */
+  --accent:      #F5B544;
+  --accent-tint: #FFF3D9;
+
+  /* Semantic */
+  --success: #5BA481;
+  --info:    #5B8FB9;
+  --danger:  #C73D2E;
+
+  /* Reader dark surfaces */
+  --night:      #1A2238;
+  --night-soft: #2A3454;
+
+  /* Story palette — for category card tints */
+  --story-rose:     #E8B5CE;
+  --story-sage:     #A8D4C2;
+  --story-apricot:  #F5C892;
+  --story-sky:      #B5C5E8;
+  --story-lavender: #D4B5E8;
+
+  /* Radii */
+  --radius-sm:   0.5rem;    /*  8px */
+  --radius-md:   0.875rem;  /* 14px */
+  --radius-lg:   1.25rem;   /* 20px */
+  --radius-xl:   1.75rem;   /* 28px */
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(31,27,22,.04), 0 1px 3px rgba(31,27,22,.06);
+  --shadow-md: 0 4px 8px -2px rgba(31,27,22,.06), 0 8px 24px -4px rgba(31,27,22,.08);
+  --shadow-lg: 0 12px 24px -8px rgba(31,27,22,.10), 0 24px 48px -12px rgba(31,27,22,.12);
+  --shadow-xl: 0 20px 40px -12px rgba(31,27,22,.14), 0 32px 64px -16px rgba(31,27,22,.18);
+
+  /* Motion */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --dur-fast: 150ms;
+  --dur-base: 220ms;
+  --dur-slow: 400ms;
 }
 
 @theme inline {
-  --color-primary: var(--primary);
-  --color-primary-dark: var(--primary-dark);
-  --color-accent: var(--accent);
-  --color-accent-dark: var(--accent-dark);
-  --color-navy: var(--navy);
-  --color-cream: var(--cream);
-  --color-ink: var(--ink);
-  --font-sans: var(--font-fredoka), 'Comic Sans MS', cursive;
+  /* Color utility names */
+  --color-surface:        var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+
+  --color-ink:       var(--ink);
+  --color-ink-soft:  var(--ink-soft);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-border:        var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-brand:      var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-tint: var(--brand-tint);
+
+  --color-accent:      var(--accent);
+  --color-accent-tint: var(--accent-tint);
+
+  --color-success: var(--success);
+  --color-info:    var(--info);
+  --color-danger:  var(--danger);
+
+  --color-night:      var(--night);
+  --color-night-soft: var(--night-soft);
+
+  --color-story-rose:     var(--story-rose);
+  --color-story-sage:     var(--story-sage);
+  --color-story-apricot:  var(--story-apricot);
+  --color-story-sky:      var(--story-sky);
+  --color-story-lavender: var(--story-lavender);
+
+  /* Radii */
+  --radius-sm:   var(--radius-sm);
+  --radius-md:   var(--radius-md);
+  --radius-lg:   var(--radius-lg);
+  --radius-xl:   var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+
+  /* Shadows */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+
+  /* Fonts */
+  --font-sans:    var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-numeral: var(--font-fredoka), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  background: var(--cream);
+html, body {
+  background: var(--surface);
   color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection */
+::selection {
+  background: var(--brand-tint);
+  color: var(--brand-deep);
+}
+
+/* Reusable focus ring (composable: add `focus-ring` alongside element classes) */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--brand-tint);
+  border-color: var(--brand);
+}
+
+/* Display utility */
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 50, "WONK" 0;
+  letter-spacing: -0.02em;
+}
+
+.font-numeral {
+  font-family: var(--font-numeral);
+  font-feature-settings: "tnum";
+}
+
+/* Drop cap for reader story prose */
+.drop-cap::first-letter {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 3.4em;
+  line-height: 0.9;
+  float: left;
+  padding: 0.1em 0.12em 0 0;
+  color: var(--brand);
+  font-variation-settings: "SOFT" 100;
+}
+
+/* Shimmer for progress bars */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,255,255,0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

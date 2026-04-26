@@ -28,7 +28,8 @@ export default async function ReadPage({ params }: { params: Promise<{ slug: str
 
   if (error || !story) notFound()
 
-  const pages = (story.pages as StoryPage[]).map(p => {
+  const rawPages = typeof story.pages === 'string' ? JSON.parse(story.pages) : story.pages
+  const pages = (rawPages as StoryPage[]).map(p => {
     const filename = `${slug}/page-${String(p.page_number).padStart(2, '0')}.png`
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename)
     return { ...p, illustration_url: data.publicUrl }
