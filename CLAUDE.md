@@ -12,49 +12,63 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 - **GitHub Pages:** https://sohaibhasan.github.io/kids-books/
 - **First story:** https://sohaibhasan.github.io/kids-books/stories/aamilah-and-the-dragon-treasure/
 
-## Planned Stack
+## Stack (current)
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js (React) + Tailwind CSS |
-| Animation | Framer Motion or react-spring |
-| State | Zustand or React Context |
-| Backend | Next.js API routes or Node/Python service |
-| AI Story Gen | Claude API (Anthropic) |
-| AI Image Gen | Hugging Face Inference API — FLUX.1-schnell (free tier) |
-| Database | PostgreSQL via Supabase or PlanetScale |
-| File Storage | AWS S3 or Cloudflare R2 |
-| Auth | Clerk, NextAuth, or Supabase Auth |
-| Hosting | Vercel or Cloudflare Pages |
+| Frontend | Next.js 16 (App Router, React 19) + Tailwind CSS v4 |
+| Fonts | Fraunces (display, variable + SOFT axis), Inter (body), Fredoka (numerals) — all via `next/font/google` |
+| UI primitives | Bespoke (Button, Input, SelectCard, Card, Badge, Chip, Progress, Stepper, IconButton); Radix for Select, Toast, Popover; lucide-react icons |
+| Animation | `motion` (Framer-maintained); variants in `lib/motion.ts` |
+| State | React local state (no global store yet) |
+| Backend | Next.js API routes |
+| AI Story Gen | Anthropic Claude sonnet-4-6 (`@anthropic-ai/sdk`) |
+| AI Image Gen | Multi-provider router (OpenAI, Recraft, fal.ai, Google) — see Image Generation section |
+| Database | Supabase Postgres (`stories` table) |
+| File Storage | Supabase Storage (`story-images` bucket) |
+| Hosting | Vercel (primary) + GitHub Pages (static story shares) |
 
 ## Current State
 
-The Next.js app (Phase 1 MVP) is built and working end-to-end locally. The full pipeline — Wizard → Claude story generation → HF image generation → `/read/[slug]` reader — is wired up and functional. Stories are persisted to `public/generated/[slug]/` (gitignored). For sharing, AI-generated stories are exported as self-contained HTML files and deployed to GitHub Pages.
+The Next.js app is in Phase 2c — the full pipeline (Wizard → Claude story generation → multi-provider image generation → `/read/[slug]` reader) runs end-to-end on Vercel against Supabase, and the entire surface area was redesigned in Phase 2c onto a modern-warm design system. For low-friction sharing, select stories are also exported as self-contained HTML files and deployed to GitHub Pages.
 
 ### Next.js App Structure
 
 ```
 app/
-  page.tsx                        ← Landing page
-  wizard/page.tsx                 ← 6-step story wizard
+  page.tsx                        ← Landing page (marketing components)
+  layout.tsx                      ← Loads Fraunces + Inter + Fredoka via next/font
+  globals.css                     ← Tailwind v4 + design tokens (@theme inline)
+  wizard/page.tsx                 ← 7-step story wizard
   generating/[slug]/page.tsx      ← Live image generation progress (SSE)
   read/[slug]/page.tsx            ← Story reader (server component)
-  api/stories/route.ts            ← POST: Claude story gen → story.json
-  api/stories/[slug]/images/route.ts  ← GET SSE: HF image gen → page-XX.png
+  api/stories/route.ts            ← POST: Claude story gen → Supabase insert → returns slug
+  api/stories/[slug]/images/route.ts  ← GET SSE: image gen → Supabase Storage; streams per-page progress + URL
 components/
-  wizard/WizardContainer.tsx      ← Wizard state + navigation (7 steps)
+  marketing/                      ← Header, Hero, HowItWorks, SampleShowcase, BottomCTA, Footer
+  wizard/WizardContainer.tsx      ← Wizard state + navigation (7 steps), ToastProvider, AnimatePresence
+  wizard/StepHeader.tsx           ← Eyebrow + title + description per step
   wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepReview
   reader/StoryReader.tsx          ← Page-by-page reader client component
-  ui/                             ← Button, Input, SelectCard
+  reader/ReaderChrome.tsx         ← Auto-hiding floating top bar
+  reader/Scrubber.tsx             ← Page scrubber with hover thumbnails
+  reader/SharePopover.tsx         ← Radix Popover for copy/native-share/print
+  ui/                             ← Button, Input, SelectCard, Card, Badge, Chip, Progress, Stepper, IconButton, Toast (Radix), Select (Radix)
 lib/
   ai/generate-story.ts            ← Claude API call, age-tier vocab, writing voice + depth injection, JSON output
-  ai/generate-image.ts            ← HF FLUX API call, returns Buffer
+  ai/generate-image.ts            ← Multi-provider image router, returns Buffer
   ai/index.ts                     ← STYLE_PREFIXES map per ArtStyle
   ai/writing-styles.ts            ← WRITING_STYLE_VOICES, TONE_META, DEPTH_MODIFIERS
+  motion.ts                       ← Framer-motion variants, springs, durations
+  utils.ts                        ← cn() class-merge helper
   utils/slug.ts                   ← makeSlug()
 types/index.ts                    ← WizardFormData, Story, Page, ArtStyle, etc.
 public/generated/[slug]/          ← story.json + page-XX.png (gitignored)
 ```
+
+### Design System (Phase 2c)
+
+Warm-modern aesthetic — softened coral + honey on cream cream surfaces, Fraunces display for emotional moments + Inter for UI. Soft layered shadows replace hard offsets. Tokens live in **one file**, `app/globals.css`, exposed to Tailwind via `@theme inline` (color, type, radius, shadow, motion). Add new tokens there; they become utilities everywhere automatically. Story-palette tints (`--story-rose/sage/apricot/sky/lavender`) are used for per-card tinted selections in the wizard. Animations honor `prefers-reduced-motion` globally and use variants from `lib/motion.ts`.
 
 ### Generated Story JSON Shape (Next.js)
 
@@ -100,8 +114,14 @@ User → Story → Page (text + illustration + scene prompt)
 
 ```
 POST   /api/stories                     → Wizard inputs → Claude story JSON → Supabase insert → returns {slug}
-GET    /api/stories/[slug]/images       → SSE stream: generates images via OpenAI gpt-image-1, uploads to Supabase Storage, streams progress (maxDuration=300)
+GET    /api/stories/[slug]/images       → SSE stream: generates images via the multi-provider router, uploads to Supabase Storage, streams progress (maxDuration=300)
 ```
+
+**SSE event shapes:**
+- `start` — `{ type, total }`
+- `progress` — `{ type, page, total, url, cached? }` (per-page; `url` is the public Supabase Storage URL — consumed by the generating page to fade in real thumbnails as pages complete)
+- `error` — `{ type, page, message }`
+- `done` — `{ type, success, total }`
 
 ### User Flow
 
@@ -207,6 +227,7 @@ npm run build
 - **Phase 1 (MVP)** ✅ Complete — Wizard → Claude story gen → OpenAI images → Supabase → Vercel. Character consistency via structured fields + character sheets.
 - **Phase 2a** ✅ Complete — Multi-provider image routing: 8 book-inspired art aesthetics, each routed to best provider (OpenAI, Recraft, fal.ai/FLUX, Google free tier). Wizard UI exposes all 8 styles (`components/wizard/steps/StepStyle.tsx`). End-to-end testing complete across all provider routes.
 - **Phase 2b.1** ✅ Complete — Story variety & depth: 8 writing-voice presets, 6 tones, 4 optional depth modifiers (plot-twist, sensory-rich, vocab-stretch, character-arc). New `StepVoice` wizard step + `lib/ai/writing-styles.ts`.
+- **Phase 2c** ✅ Complete — End-to-end visual redesign. New design system in `app/globals.css` (warm-modern palette, Fraunces+Inter, soft elevation, motion tokens). Primitives rebuilt + new ones added (Card/Badge/Chip/Progress/Stepper/IconButton/Toast/Select). Marketing landing rewrite. Wizard chrome with sticky footer nav, AnimatePresence step transitions, toast errors, jump-to-edit review with cover preview. Generating screen with rotating copy + real per-page thumbnail grid (powered by extended SSE `url` field). Reader with auto-hiding chrome, slide+fade transitions, swipe gestures, glass IconButton chevrons, Scrubber, SharePopover, and Fraunces drop-cap story prose.
 - **Phase 2b (remaining)** — Storyboard editor, FLUX.1 Kontext character consistency upgrade, read-aloud, night mode, narrative structure presets, POV selector, bilingual output
 - **Phase 3** — User accounts, story library, age-tier vocabulary, bilingual support
 - **Phase 4** — Stripe payments, subscriptions, print-on-demand, classroom accounts
