@@ -41,6 +41,13 @@ yarn-error.log*
 
 # Claude Code local settings (may contain sensitive permission entries)
 .claude/settings.local.json
+.claude/settings.json
+.claude/skills/
+.agents/
+skills-lock.json
+
+# Apple iCloud Drive placeholders
+*.icloud
 
 # typescript
 *.tsbuildinfo
