@@ -196,6 +196,19 @@ The wizard collects structured appearance fields to seed the character sheet:
 
 The outfit is the strongest consistency anchor — it's the most visually distinctive element that the model can reproduce reliably across pages.
 
+## Monetization (Freemium)
+
+**Model:** one free story per device, then prepaid credit packs. No accounts.
+
+- **Identity:** signed first-party cookie `kb_device` (HMAC via `DEVICE_COOKIE_SECRET`) plus a server-side `sha256(ip + ua + accept-language)` fallback hash. Free allowance is "burnt" if either matches a prior `stories` row, so clearing cookies on the same browser/network does not reset it.
+- **Credits ledger:** `credit_events` table (event-sourced; balance = SUM of deltas). `+N` on Stripe `checkout.session.completed`, `−1` per paid generation. `unique(stripe_session)` makes the webhook idempotent.
+- **Gate point:** `app/api/stories/route.ts` resolves identity, calls `getEntitlement()` from `lib/credits.ts`, returns **402 `{ paywall: true, packs }`** before invoking Claude when the device has no free allowance and no balance.
+- **Checkout:** `POST /api/checkout { pack: 'small' | 'large' }` → Stripe Checkout Session (guest mode; prices via `STRIPE_PRICE_PACK_3` / `STRIPE_PRICE_PACK_10`). Success URL `/wizard?paid=1`; the wizard stashes in-flight `WizardFormData` in `sessionStorage` before redirect and auto-resubmits on return.
+- **Cross-device recovery:** webhook mints a `credit_claim_tokens` row and emails a magic link via Resend. `GET /api/credits/claim?token=…` rebinds the cookie to the original `source_device`.
+- **Circuit breaker:** `FREE_STORIES_PER_DAY_GLOBAL` (default 200) — free-tier requests beyond the daily ceiling get a 503.
+
+**Key files:** `lib/identity.ts`, `lib/credits.ts`, `lib/stripe.ts`, `lib/email.ts`, `components/paywall/PaywallModal.tsx`, `app/api/checkout/route.ts`, `app/api/stripe/webhook/route.ts`, `app/api/credits/claim/route.ts`, `supabase/migrations/0002_freemium.sql`.
+
 ## Deployment
 
 **Vercel (primary):** https://kidsbooks-eight.vercel.app

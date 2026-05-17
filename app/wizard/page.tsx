@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import WizardContainer from '@/components/wizard/WizardContainer'
 
 export const metadata = {
@@ -5,5 +6,9 @@ export const metadata = {
 }
 
 export default function WizardPage() {
-  return <WizardContainer />
+  return (
+    <Suspense fallback={null}>
+      <WizardContainer />
+    </Suspense>
+  )
 }

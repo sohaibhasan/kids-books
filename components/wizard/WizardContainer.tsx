@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { WizardFormData } from '@/types'
@@ -10,6 +10,7 @@ import Stepper from '@/components/ui/Stepper'
 import Button from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { stepVariants } from '@/lib/motion'
+import PaywallModal, { PaywallPack } from '@/components/paywall/PaywallModal'
 import StepChild from './steps/StepChild'
 import StepGenre from './steps/StepGenre'
 import StepTheme from './steps/StepTheme'
@@ -55,13 +56,18 @@ function canAdvance(step: number, data: WizardFormData): boolean {
   return true
 }
 
+const RESUME_KEY = 'kb_wizard_resume'
+
 function WizardInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [data, setData] = useState<WizardFormData>(defaultData)
   const [submitting, setSubmitting] = useState(false)
+  const [paywall, setPaywall] = useState<{ open: boolean; packs: PaywallPack[] }>({ open: false, packs: [] })
   const directionRef = useRef(1)
+  const resumeFiredRef = useRef(false)
 
   const update = (fields: Partial<WizardFormData>) => setData((prev) => ({ ...prev, ...fields }))
 
@@ -72,19 +78,29 @@ function WizardInner() {
   const next = () => goTo(step + 1)
   const back = () => goTo(step - 1)
 
-  const handleCreate = async () => {
+  const submit = async (form: WizardFormData) => {
     setSubmitting(true)
     try {
       const res = await fetch('/api/stories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(form),
       })
+      if (res.status === 402) {
+        const body = await res.json().catch(() => ({}))
+        if (body?.paywall) {
+          sessionStorage.setItem(RESUME_KEY, JSON.stringify(form))
+          setPaywall({ open: true, packs: body.packs ?? [] })
+          setSubmitting(false)
+          return
+        }
+      }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error(body.error || `Server error ${res.status}`)
       }
       const { slug } = await res.json()
+      sessionStorage.removeItem(RESUME_KEY)
       router.push(`/generating/${slug}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -92,6 +108,37 @@ function WizardInner() {
       setSubmitting(false)
     }
   }
+
+  const handleCreate = () => submit(data)
+
+  // Auto-resume after a successful Stripe checkout (?paid=1) or magic-link reclaim (?reclaimed=1).
+  useEffect(() => {
+    if (resumeFiredRef.current) return
+    const paid = searchParams.get('paid') === '1'
+    const reclaimed = searchParams.get('reclaimed') === '1'
+    if (!paid && !reclaimed) return
+    resumeFiredRef.current = true
+
+    const stashed = sessionStorage.getItem(RESUME_KEY)
+    if (paid && stashed) {
+      try {
+        const form = JSON.parse(stashed) as WizardFormData
+        setData(form)
+        setStep(7)
+        toast({ tone: 'success', title: 'Payment received', description: 'Picking up where you left off.' })
+        void submit(form)
+        return
+      } catch {
+        /* fall through */
+      }
+    }
+    if (reclaimed) {
+      toast({ tone: 'success', title: 'Credits restored', description: 'Welcome back — your credits moved with you.' })
+    } else if (paid) {
+      toast({ tone: 'success', title: 'Payment received', description: 'Your credits are ready.' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const stepContent = (() => {
     switch (step) {
@@ -185,6 +232,12 @@ function WizardInner() {
           )}
         </div>
       </footer>
+
+      <PaywallModal
+        open={paywall.open}
+        packs={paywall.packs}
+        onClose={() => setPaywall((p) => ({ ...p, open: false }))}
+      />
     </div>
   )
 }
