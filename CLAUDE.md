@@ -8,8 +8,9 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 
 ## Live Links
 
+- **Production:** https://storybookstudio.org (primary; also `https://www.storybookstudio.org` and the legacy `https://kidsbooks-eight.vercel.app`)
 - **Repo:** https://github.com/sohaibhasan/kids-books
-- **GitHub Pages:** https://sohaibhasan.github.io/kids-books/
+- **GitHub Pages (legacy static prototype):** https://sohaibhasan.github.io/kids-books/
 - **First story:** https://sohaibhasan.github.io/kids-books/stories/aamilah-and-the-dragon-treasure/
 
 ## Stack (current)
@@ -24,9 +25,11 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 | Backend | Next.js API routes |
 | AI Story Gen | Anthropic Claude sonnet-4-6 (`@anthropic-ai/sdk`) |
 | AI Image Gen | Multi-provider router (OpenAI, Recraft, fal.ai, Google) — see Image Generation section |
-| Database | Supabase Postgres (`stories` table) |
+| Database | Supabase Postgres (`stories`, `credit_events`, `credit_claim_tokens`) |
 | File Storage | Supabase Storage (`story-images` bucket) |
-| Hosting | Vercel (primary) + GitHub Pages (static story shares) |
+| Payments | Stripe Checkout (guest mode, one-time credit packs) — `stripe` SDK |
+| Transactional Email | Resend REST API (magic-link recovery emails) |
+| Hosting | Vercel (primary, `storybookstudio.org`) + GitHub Pages (legacy static shares) |
 
 ## Current State
 
@@ -207,14 +210,31 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 - **Cross-device recovery:** webhook mints a `credit_claim_tokens` row and emails a magic link via Resend. `GET /api/credits/claim?token=…` rebinds the cookie to the original `source_device`.
 - **Circuit breaker:** `FREE_STORIES_PER_DAY_GLOBAL` (default 200) — free-tier requests beyond the daily ceiling get a 503.
 
+**Stripe modes:** `STRIPE_SECRET_KEY` is the **live** key in production, so `/api/checkout` always creates live Sessions (real money) regardless of the dashboard's mode toggle. The webhook handler accepts **either** signature: tries `STRIPE_WEBHOOK_SECRET` (live) first, falls back to `STRIPE_WEBHOOK_SECRET_TEST` — so the test-mode endpoint (`we_1TXkSUF5za3JxXe0RANXRsO2`) stays useful for CLI replays / dashboard test events without disturbing live payments. To do a true test-mode E2E against the live URL, override `STRIPE_SECRET_KEY` on a preview branch.
+
+**Live Stripe IDs (record-keeping):**
+- Products: `prod_UWyaxMWuVSc2QZ` (3-pack), `prod_UWyaeSceVGi94F` (10-pack)
+- Prices: `price_1TXud4FVsOo5w5LqBg3jubuB` ($5/3 stories), `price_1TXud4FVsOo5w5LqfvOeqHcc` ($12/10 stories)
+- Webhook: `we_1TXud5FVsOo5w5LqhmYkqhnL` → `https://storybookstudio.org/api/stripe/webhook`, event `checkout.session.completed`
+
+**Resend:** sending domain is `support.storybookstudio.org` (verified). `EMAIL_FROM = "Storybook Studio <hello@support.storybookstudio.org>"`. The apex `storybookstudio.org` is **not** verified in Resend — don't change EMAIL_FROM to use the apex without re-verifying.
+
 **Key files:** `lib/identity.ts`, `lib/credits.ts`, `lib/stripe.ts`, `lib/email.ts`, `components/paywall/PaywallModal.tsx`, `app/api/checkout/route.ts`, `app/api/stripe/webhook/route.ts`, `app/api/credits/claim/route.ts`, `supabase/migrations/0002_freemium.sql`.
 
 ## Deployment
 
-**Vercel (primary):** https://kidsbooks-eight.vercel.app
+**Vercel (primary):** https://storybookstudio.org (legacy alias: https://kidsbooks-eight.vercel.app)
+- **Domain:** registered at Cloudflare Registrar. DNS records (apex `A 76.76.21.21`, `www CNAME cname.vercel-dns.com`) are **DNS only** (gray cloud) — Vercel handles SSL itself; proxying would cause redirect loops.
 - **Auto-deploy:** push to `main` → Vercel builds and promotes to production. Push to any other branch → preview deployment. (Connected via the Vercel GitHub App.)
 - **Manual fallback:** `~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/bin/vercel --prod --yes`
-- Env vars: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `HF_TOKEN`, `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+- **Env vars (Production):**
+  - AI: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`, `HF_TOKEN`
+  - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+  - Freemium gating: `DEVICE_COOKIE_SECRET`, `FREE_STORIES_PER_DAY_GLOBAL`
+  - Stripe: `STRIPE_SECRET_KEY` (sk_live), `STRIPE_WEBHOOK_SECRET` (live), `STRIPE_WEBHOOK_SECRET_TEST` (test, fallback), `STRIPE_PRICE_PACK_3`, `STRIPE_PRICE_PACK_10`
+  - Email: `RESEND_API_KEY`, `EMAIL_FROM`
+  - App: `APP_URL=https://storybookstudio.org`
+- See `.env.example` for the full template.
 
 **GitHub Pages (static story shares):** https://sohaibhasan.github.io/kids-books/
 - Self-contained HTML files with base64-encoded images under `stories/<slug>/index.html`
@@ -242,6 +262,6 @@ npm run build
 - **Phase 2a** ✅ Complete — Multi-provider image routing: 8 book-inspired art aesthetics, each routed to best provider (OpenAI, Recraft, fal.ai/FLUX, Google free tier). Wizard UI exposes all 8 styles (`components/wizard/steps/StepStyle.tsx`). End-to-end testing complete across all provider routes.
 - **Phase 2b.1** ✅ Complete — Story variety & depth: 8 writing-voice presets, 6 tones, 4 optional depth modifiers (plot-twist, sensory-rich, vocab-stretch, character-arc). New `StepVoice` wizard step + `lib/ai/writing-styles.ts`.
 - **Phase 2c** ✅ Complete — End-to-end visual redesign. New design system in `app/globals.css` (warm-modern palette, Fraunces+Inter, soft elevation, motion tokens). Primitives rebuilt + new ones added (Card/Badge/Chip/Progress/Stepper/IconButton/Toast/Select). Marketing landing rewrite. Wizard chrome with sticky footer nav, AnimatePresence step transitions, toast errors, jump-to-edit review with cover preview. Generating screen with rotating copy + real per-page thumbnail grid (powered by extended SSE `url` field). Reader with auto-hiding chrome, slide+fade transitions, swipe gestures, glass IconButton chevrons, Scrubber, SharePopover, and Fraunces drop-cap story prose.
+- **Phase 3 (Monetization)** ✅ Complete — Freemium gating live in production at `storybookstudio.org`. Free first story per device (signed cookie + IP/UA fallback hash), then prepaid Stripe credit packs ($5/3 stories, $12/10 stories). Magic-link cross-device recovery via Resend (`support.storybookstudio.org`). Webhook handler accepts both live + test signatures. End-to-end validated: free gate, paywall trigger, Stripe Checkout (live mode), credit grant + consume, magic-link delivery. See "Monetization (Freemium)" section.
 - **Phase 2b (remaining)** — Storyboard editor, FLUX.1 Kontext character consistency upgrade, read-aloud, night mode, narrative structure presets, POV selector, bilingual output
-- **Phase 3** — User accounts, story library, age-tier vocabulary, bilingual support
-- **Phase 4** — Stripe payments, subscriptions, print-on-demand, classroom accounts
+- **Phase 4** — Subscriptions, print-on-demand, classroom accounts, optional user accounts for richer library/history
