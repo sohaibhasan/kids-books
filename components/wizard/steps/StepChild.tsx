@@ -31,7 +31,14 @@ const SKIN_TONES = [
 
 const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red', 'Auburn', 'Strawberry Blonde']
 const HAIR_STYLES = ['Straight and short', 'Straight and long', 'Wavy and short', 'Wavy and long', 'Curly and short', 'Curly and long', 'Coily / afro', 'Braids', 'Ponytail', 'Two puffs', 'Pigtails', 'Bun', 'Buzz cut']
-const EYE_COLORS  = ['Brown', 'Dark Brown', 'Hazel', 'Green', 'Blue', 'Gray']
+const EYE_COLORS = [
+  { value: 'brown',       label: 'Brown',       color: '#5C3310' },
+  { value: 'dark brown',  label: 'Dark Brown',  color: '#2B1A0C' },
+  { value: 'hazel',       label: 'Hazel',       color: '#A47148' },
+  { value: 'green',       label: 'Green',       color: '#3E7B4E' },
+  { value: 'blue',        label: 'Blue',        color: '#3C7AB8' },
+  { value: 'gray',        label: 'Gray',        color: '#8E9CA8' },
+]
 
 const OUTFITS = [
   { value: 'a bright red hoodie with a yellow star on the chest, blue jeans, and white sneakers', label: 'Red Hoodie', icon: '🔴' },
@@ -47,6 +54,34 @@ const OUTFITS = [
   { value: 'a shiny yellow rain jacket with big buttons, dark green rain pants, and red rubber rain boots', label: 'Rainy Day', icon: '🌧️' },
   { value: 'a red-and-black plaid flannel shirt, olive cargo pants, and tan hiking boots with thick soles', label: 'Fall Flannel', icon: '🍂' },
 ]
+
+function ColorSwatchButton({
+  color, label, selected, onClick,
+}: { color: string; label: string; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-center gap-1.5 rounded-md py-3 px-2',
+        'border transition-all duration-150 ease-out',
+        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-tint',
+        selected
+          ? 'bg-brand-tint border-brand shadow-sm'
+          : 'bg-surface-raised border-border hover:border-ink-muted',
+      )}
+    >
+      <span
+        className={cn(
+          'size-9 rounded-pill border',
+          selected ? 'border-brand ring-2 ring-brand/20' : 'border-border',
+        )}
+        style={{ backgroundColor: color }}
+      />
+      <span className="text-[11px] font-medium text-ink">{label}</span>
+    </button>
+  )
+}
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -126,33 +161,15 @@ export default function StepChild({ data, onChange }: Props) {
           <div>
             <p className="text-sm font-medium text-ink mb-2">Skin tone</p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {SKIN_TONES.map((s) => {
-                const selected = data.skin_tone === s.value
-                return (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => onChange({ skin_tone: s.value })}
-                    className={cn(
-                      'flex flex-col items-center gap-1.5 rounded-md py-3 px-2',
-                      'border transition-all duration-150 ease-out',
-                      'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-tint',
-                      selected
-                        ? 'bg-brand-tint border-brand shadow-sm'
-                        : 'bg-surface-raised border-border hover:border-ink-muted',
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        'size-9 rounded-pill border',
-                        selected ? 'border-brand ring-2 ring-brand/20' : 'border-border',
-                      )}
-                      style={{ backgroundColor: s.color }}
-                    />
-                    <span className="text-[11px] font-medium text-ink">{s.label}</span>
-                  </button>
-                )
-              })}
+              {SKIN_TONES.map((s) => (
+                <ColorSwatchButton
+                  key={s.value}
+                  color={s.color}
+                  label={s.label}
+                  selected={data.skin_tone === s.value}
+                  onClick={() => onChange({ skin_tone: s.value })}
+                />
+              ))}
             </div>
           </div>
 
@@ -177,12 +194,12 @@ export default function StepChild({ data, onChange }: Props) {
             <p className="text-sm font-medium text-ink mb-2">Eye color</p>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
               {EYE_COLORS.map((c) => (
-                <SelectCard
-                  key={c}
-                  label={c}
-                  selected={data.eye_color === c.toLowerCase()}
-                  onClick={() => onChange({ eye_color: c.toLowerCase() })}
-                  size="sm"
+                <ColorSwatchButton
+                  key={c.value}
+                  color={c.color}
+                  label={c.label}
+                  selected={data.eye_color === c.value}
+                  onClick={() => onChange({ eye_color: c.value })}
                 />
               ))}
             </div>
