@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'motion/react'
-import { Check, Sparkles } from 'lucide-react'
+import { Check } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { fadeUp, staggerChildren } from '@/lib/motion'
@@ -127,11 +127,10 @@ export default function Pricing() {
               {t.badge && (
                 <span
                   className={cn(
-                    'absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 px-3 h-6 rounded-pill text-[11px] uppercase tracking-widest font-semibold',
+                    'absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center px-3 h-6 rounded-pill text-[11px] uppercase tracking-wider font-semibold whitespace-nowrap',
                     t.highlight ? 'bg-brand text-white' : 'bg-ink text-white',
                   )}
                 >
-                  {t.highlight && <Sparkles className="size-3" />}
                   {t.badge}
                 </span>
               )}
