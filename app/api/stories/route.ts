@@ -4,6 +4,7 @@ import { makeSlug } from '@/lib/utils/slug'
 import { supabase } from '@/lib/supabase'
 import { getOrSetDeviceId, getFallbackHash } from '@/lib/identity'
 import { getEntitlement, consumeOne, isGloballyThrottled, PACKS } from '@/lib/credits'
+import { maybeAlertProviderQuota } from '@/lib/alerts'
 import { WizardFormData } from '@/types'
 
 export async function POST(req: NextRequest) {
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ slug, title: story.title })
   } catch (err) {
     console.error('[POST /api/stories]', err)
+    void maybeAlertProviderQuota(err, 'POST /api/stories (Claude story-gen)')
     const message =
       err instanceof Error
         ? err.message

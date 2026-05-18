@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { generateImage } from '@/lib/ai/generate-image'
 import { supabase } from '@/lib/supabase'
+import { maybeAlertProviderQuota } from '@/lib/alerts'
 import { ArtStyle, ImageQuality } from '@/types'
 
 export const maxDuration = 300
@@ -89,6 +90,7 @@ export async function GET(
             })
           } catch (err) {
             console.error(`[images ${slug} page ${page.page_number}]`, err)
+            void maybeAlertProviderQuota(err, `images ${slug} page ${page.page_number}`)
             const message =
               err instanceof Error
                 ? err.message
