@@ -34,6 +34,8 @@ const ROTATING_COPY = [
   'A touch of magic…',
 ]
 
+const MAX_AUTO_RETRIES = 2
+
 export default function GeneratingPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
@@ -44,7 +46,9 @@ export default function GeneratingPage() {
   const [storyTitle, setStoryTitle] = useState('')
   const [status, setStatus] = useState<'generating' | 'error'>('generating')
   const [copyIdx, setCopyIdx] = useState(0)
+  const [retryKey, setRetryKey] = useState(0)
   const startRef = useRef<number>(Date.now())
+  const autoRetryRef = useRef(0)
 
   // Title
   useEffect(() => {
@@ -60,49 +64,92 @@ export default function GeneratingPage() {
     return () => clearInterval(id)
   }, [])
 
-  // SSE
+  // SSE — keepalives prevent most drops, but if the stream dies anyway we
+  // consult /status to recover silently (image-existence fast path makes a
+  // re-open essentially free if the server already finished).
   useEffect(() => {
-    const es = new EventSource(`/api/stories/${slug}/images`)
+    let cancelled = false
+    let currentEs: EventSource | null = null
+    let doneArrived = false
     startRef.current = Date.now()
 
-    es.onmessage = (e) => {
-      const data = JSON.parse(e.data)
+    const open = () => {
+      if (cancelled) return
+      const es = new EventSource(`/api/stories/${slug}/images`)
+      currentEs = es
 
-      if (data.type === 'start') {
-        setState((p) => ({
-          ...p,
-          total: data.total,
-          thumbs: Array.from({ length: data.total }, (_, i) => ({ page: i })),
-        }))
-      } else if (data.type === 'progress') {
-        setState((p) => {
-          const thumbs = p.thumbs.map((t) =>
-            t.page === data.page ? { ...t, url: data.url as string | undefined } : t,
-          )
-          return { ...p, current: p.current + 1, thumbs }
-        })
-      } else if (data.type === 'error') {
-        setState((p) => ({
-          ...p,
-          errors: p.errors + 1,
-          current: p.current + 1,
-          errorMessage: p.errorMessage || data.message || 'Unknown error',
-        }))
-      } else if (data.type === 'done') {
-        const success = data.success ?? 0
-        setState((p) => ({ ...p, done: true, success }))
+      es.onmessage = (e) => {
+        const data = JSON.parse(e.data)
+
+        if (data.type === 'start') {
+          setState((p) => ({
+            ...p,
+            total: data.total,
+            thumbs: p.thumbs.length === data.total
+              ? p.thumbs
+              : Array.from({ length: data.total }, (_, i) => ({ page: i })),
+          }))
+        } else if (data.type === 'progress') {
+          setState((p) => {
+            const thumbs = p.thumbs.map((t) =>
+              t.page === data.page ? { ...t, url: data.url as string | undefined } : t,
+            )
+            return { ...p, current: p.current + 1, thumbs }
+          })
+        } else if (data.type === 'error') {
+          setState((p) => ({
+            ...p,
+            errors: p.errors + 1,
+            current: p.current + 1,
+            errorMessage: p.errorMessage || data.message || 'Unknown error',
+          }))
+        } else if (data.type === 'done') {
+          doneArrived = true
+          const success = data.success ?? 0
+          setState((p) => ({ ...p, done: true, success }))
+          es.close()
+          if (success > 0) setTimeout(() => router.push(`/read/${slug}`), 900)
+        }
+      }
+
+      es.onerror = async () => {
+        // EventSource fires `error` on any abnormal close, including the
+        // intentional `es.close()` we just made after `done`. Ignore those.
+        if (doneArrived || cancelled) {
+          es.close()
+          return
+        }
         es.close()
-        if (success > 0) setTimeout(() => router.push(`/read/${slug}`), 900)
+
+        // Check whether the server actually finished while we weren't looking.
+        try {
+          const res = await fetch(`/api/stories/${slug}/status`, { cache: 'no-store' })
+          if (res.ok) {
+            const body = await res.json()
+            if (body.images_done) {
+              router.push(`/read/${slug}`)
+              return
+            }
+          }
+        } catch { /* fall through to retry */ }
+
+        if (autoRetryRef.current < MAX_AUTO_RETRIES) {
+          autoRetryRef.current += 1
+          // Small backoff before re-opening.
+          setTimeout(() => { if (!cancelled) open() }, 800)
+        } else {
+          setStatus('error')
+        }
       }
     }
 
-    es.onerror = () => {
-      setStatus('error')
-      es.close()
-    }
+    open()
 
-    return () => es.close()
-  }, [slug, router])
+    return () => {
+      cancelled = true
+      currentEs?.close()
+    }
+  }, [slug, router, retryKey])
 
   const pct = state.total > 0 ? Math.round((state.current / state.total) * 100) : 0
   const allFailed = state.done && state.success === 0 && state.total > 0
@@ -119,8 +166,10 @@ export default function GeneratingPage() {
 
   if (status === 'error' || allFailed) {
     return <ErrorState message={state.errorMessage} total={state.total} onRetry={() => {
+      autoRetryRef.current = 0
       setStatus('generating')
       setState({ done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '', thumbs: [] })
+      setRetryKey((k) => k + 1)
     }} />
   }
 
@@ -242,8 +291,11 @@ function ErrorState({ message, total, onRetry }: { message: string; total: numbe
         <h1 className="font-display text-3xl text-ink leading-tight">Something went sideways.</h1>
         <p className="mt-3 text-ink-soft">
           {total > 0
-            ? `All ${total} illustrations failed to generate. We can try again — usually it works on a retry.`
-            : 'Image generation hit an error before any pages were drawn.'}
+            ? `We lost the connection while drawing your ${total}-page story. A retry usually picks up where we left off.`
+            : 'We hit an error before any pages were drawn. Tap retry to try again.'}
+        </p>
+        <p className="mt-3 inline-block rounded-md bg-brand-tint/60 px-3 py-1.5 text-sm text-brand-deep">
+          No worries — failed attempts don&apos;t count against your quota.
         </p>
         {message && (
           <details className="mt-5 text-left">

@@ -100,7 +100,10 @@ export default function PaywallModal({ open, packs, onClose }: Props) {
 
             {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
-            <p className="mt-6 text-xs text-ink-muted text-center">
+            <p className="mt-5 text-xs text-ink-soft text-center">
+              Failed generations are automatically refunded — you only pay for stories you actually receive.
+            </p>
+            <p className="mt-2 text-xs text-ink-muted text-center">
               Secure checkout via Stripe.
             </p>
             <div className="mt-2 text-center">

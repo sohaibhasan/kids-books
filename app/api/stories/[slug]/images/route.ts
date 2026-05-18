@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { generateImage } from '@/lib/ai/generate-image'
 import { supabase } from '@/lib/supabase'
 import { maybeAlertProviderQuota } from '@/lib/alerts'
+import { refundFailedGen } from '@/lib/credits'
 import { ArtStyle, ImageQuality } from '@/types'
 
 export const maxDuration = 300
@@ -17,7 +18,7 @@ export async function GET(
 
     const { data: story, error } = await supabase
       .from('stories')
-      .select('pages, form')
+      .select('pages, form, device_id, credit_event_id')
       .eq('slug', slug)
       .single()
 
@@ -42,9 +43,18 @@ export async function GET(
 
     const stream = new ReadableStream({
       async start(controller) {
+        let closed = false
         const send = (data: object) => {
+          if (closed) return
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
         }
+        // SSE keepalive: send a comment line every 15s so idle proxies/browsers
+        // don't close the connection during long generateImage() calls. The
+        // EventSource client silently ignores comment-only lines.
+        const keepalive = setInterval(() => {
+          if (closed) return
+          try { controller.enqueue(encoder.encode(`: keepalive\n\n`)) } catch { /* stream gone */ }
+        }, 15_000)
 
         send({ type: 'start', total: pages.length })
 
@@ -108,18 +118,30 @@ export async function GET(
         // Only mark done if all images succeeded
         if (successCount === pages.length) {
           await supabase.from('stories').update({ images_done: true }).eq('slug', slug)
+        } else if (story.credit_event_id && story.device_id) {
+          // Paid story that didn't fully complete — refund the credit so the
+          // user can try again without losing their money. Idempotent.
+          try {
+            await refundFailedGen(story.device_id as string, slug)
+          } catch (refundErr) {
+            console.error(`[images ${slug}] refund failed`, refundErr)
+          }
         }
 
         send({ type: 'done', success: successCount, total: pages.length })
+        clearInterval(keepalive)
+        closed = true
         controller.close()
       },
     })
 
     return new Response(stream, {
       headers: {
-        'Content-Type':  'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection:      'keep-alive',
+        'Content-Type':       'text/event-stream',
+        'Cache-Control':      'no-cache, no-transform',
+        Connection:           'keep-alive',
+        // Hint to Vercel's edge / any upstream proxy: do not buffer this stream.
+        'X-Accel-Buffering':  'no',
       },
     })
   } catch (err) {
