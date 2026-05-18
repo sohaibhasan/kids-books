@@ -1,10 +1,18 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { motion } from 'motion/react'
 import { ArrowRight, Sparkles, Clock, Printer } from 'lucide-react'
 import { fadeUp, staggerChildren } from '@/lib/motion'
 import Button from '@/components/ui/Button'
+
+const HERO_STORY = {
+  slug: 'aamilah-u9n5m',
+  title: 'Aamilah and the Mountain of Giving',
+  coverUrl: 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/object/public/story-images/aamilah-u9n5m/page-00.png',
+  excerpt: 'Aamilah pressed her palm to the cool stone door, and the mountain answered with a low, kindly hum…',
+}
 
 export default function Hero() {
   return (
@@ -107,38 +115,34 @@ function HeroMockup() {
         aria-hidden
         className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-xl bg-brand-tint"
       />
-      <div className="relative rounded-xl bg-surface-raised shadow-xl overflow-hidden border border-border">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://sohaibhasan.github.io/kids-books/stories/aamilah-and-the-dragon-treasure/"
-          alt=""
-          aria-hidden
-          className="hidden"
-        />
-        <div
-          className="aspect-[4/5] w-full bg-cover bg-center"
-          style={{
-            background:
-              'linear-gradient(135deg, var(--story-apricot) 0%, var(--brand-tint) 50%, var(--story-rose) 100%)',
-          }}
-        >
-          <div className="h-full w-full flex flex-col justify-end p-6">
-            <div className="size-12 rounded-pill bg-white/70 backdrop-blur flex items-center justify-center text-2xl mb-3">
-              🐉
-            </div>
-            <p className="text-[11px] uppercase tracking-widest text-ink/60 font-semibold">A Storybook Studio Original</p>
-            <h3 className="font-display text-3xl text-ink leading-tight mt-1">
-              Aamilah and the Dragon&apos;s Treasure
+      <Link
+        href={`/read/${HERO_STORY.slug}`}
+        className="relative block rounded-xl bg-surface-raised shadow-xl overflow-hidden border border-border group"
+      >
+        <div className="relative aspect-[4/5] w-full bg-surface-sunken">
+          <Image
+            src={HERO_STORY.coverUrl}
+            alt={`Cover illustration for ${HERO_STORY.title}`}
+            fill
+            priority
+            sizes="(min-width: 768px) 480px, 90vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          />
+          <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/75 via-black/35 to-transparent">
+            <p className="text-[11px] uppercase tracking-widest text-white/85 font-semibold drop-shadow">
+              A Storybook Studio Original
+            </p>
+            <h3 className="font-display text-3xl text-white leading-tight mt-1 drop-shadow">
+              {HERO_STORY.title}
             </h3>
           </div>
         </div>
         <div className="p-5 border-t border-border">
           <p className="text-sm text-ink-soft leading-relaxed">
-            <span className="drop-cap">A</span>amilah pressed her palm to the cool stone door, and the
-            mountain answered with a low, kindly hum…
+            <span className="drop-cap">A</span>{HERO_STORY.excerpt.slice(1)}
           </p>
         </div>
-      </div>
+      </Link>
     </div>
   )
 }
