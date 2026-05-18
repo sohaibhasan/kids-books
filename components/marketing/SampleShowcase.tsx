@@ -1,31 +1,32 @@
 'use client'
 
+import Image from 'next/image'
 import { motion } from 'motion/react'
 import { ArrowUpRight } from 'lucide-react'
 import { fadeUp, staggerChildren } from '@/lib/motion'
 
+const SUPABASE_PUBLIC = 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/object/public/story-images'
+
 const SAMPLES = [
   {
-    title: "Aamilah and the Dragon's Treasure",
-    href: 'https://sohaibhasan.github.io/kids-books/stories/aamilah-and-the-dragon-treasure/',
-    gradient: 'linear-gradient(135deg, var(--story-apricot), var(--brand-tint))',
-    emoji: '🐉',
-    tag: 'Adventure · Bravery',
+    slug: 'minha-9zpx7',
+    title: 'Minha and the Signal from Somewhere Else',
+    tag: 'Sci-fi · Curiosity',
   },
   {
-    title: 'Minha and the Kind Little Spark',
-    href: 'https://sohaibhasan.github.io/kids-books/stories/minha-and-the-kind-little-spark/',
-    gradient: 'linear-gradient(135deg, var(--story-sky), var(--story-lavender))',
-    emoji: '✨',
-    tag: 'Heartfelt · Kindness',
+    slug: 'aurelio-klpv1',
+    title: 'Aurelio and the Underwater Kingdom',
+    tag: 'Nature · Discovery',
   },
   {
-    title: 'Your story · coming soon',
-    href: '/wizard',
-    gradient: 'linear-gradient(135deg, var(--story-sage), var(--accent-tint))',
-    emoji: '📖',
-    tag: 'Make it yours',
-    placeholder: true,
+    slug: 'aamilah-u9n5m',
+    title: 'Aamilah and the Mountain of Giving',
+    tag: 'Adventure · Generosity',
+  },
+  {
+    slug: 'minha-y0mfr',
+    title: 'Minha and the Mountain of Stars',
+    tag: 'Fairy-tale · Wonder',
   },
 ]
 
@@ -58,33 +59,36 @@ export default function SampleShowcase() {
           whileInView="show"
           viewport={{ once: true, margin: '-80px' }}
           variants={staggerChildren(0.08)}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
         >
           {SAMPLES.map((s) => (
             <motion.a
-              key={s.title}
-              href={s.href}
-              target={s.href.startsWith('http') ? '_blank' : undefined}
-              rel={s.href.startsWith('http') ? 'noopener noreferrer' : undefined}
+              key={s.slug}
+              href={`/read/${s.slug}`}
               variants={fadeUp}
               whileHover={{ y: -4 }}
               transition={{ duration: 0.2 }}
               className="group block rounded-xl overflow-hidden bg-surface-raised border border-border shadow-sm hover:shadow-lg transition-shadow"
             >
-              <div
-                className="aspect-[4/5] flex items-end p-6"
-                style={{ background: s.gradient }}
-              >
-                <div className="w-full">
-                  <div className="size-12 rounded-pill bg-white/70 backdrop-blur inline-flex items-center justify-center text-2xl mb-3">
-                    {s.emoji}
-                  </div>
-                  <p className="text-[11px] uppercase tracking-widest text-ink/70 font-semibold">{s.tag}</p>
-                  <h3 className="font-display text-xl text-ink leading-tight mt-1">{s.title}</h3>
+              <div className="relative aspect-[4/5] bg-surface-sunken">
+                <Image
+                  src={`${SUPABASE_PUBLIC}/${s.slug}/page-00.png`}
+                  alt={`Cover illustration for ${s.title}`}
+                  fill
+                  sizes="(min-width: 1024px) 22vw, (min-width: 640px) 45vw, 90vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                />
+                <div className="absolute inset-x-0 bottom-0 p-5 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+                  <p className="text-[11px] uppercase tracking-widest text-white/85 font-semibold drop-shadow">
+                    {s.tag}
+                  </p>
+                  <h3 className="font-display text-lg text-white leading-tight mt-1 drop-shadow">
+                    {s.title}
+                  </h3>
                 </div>
               </div>
               <div className="px-5 py-4 flex items-center justify-between text-sm text-ink-soft">
-                <span>{s.placeholder ? 'Start the wizard' : 'Read the book'}</span>
+                <span>Read the book</span>
                 <ArrowUpRight className="size-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </div>
             </motion.a>
