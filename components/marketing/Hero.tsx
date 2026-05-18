@@ -8,10 +8,10 @@ import { fadeUp, staggerChildren } from '@/lib/motion'
 import Button from '@/components/ui/Button'
 
 const HERO_STORY = {
-  slug: 'aamilah-u9n5m',
-  title: 'Aamilah and the Mountain of Giving',
-  coverUrl: 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/object/public/story-images/aamilah-u9n5m/page-00.png',
-  excerpt: 'Aamilah pressed her palm to the cool stone door, and the mountain answered with a low, kindly hum…',
+  slug: 'minha-y0mfr',
+  title: 'Minha and the Mountain of Stars',
+  coverUrl: 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/object/public/story-images/minha-y0mfr/page-00.png',
+  excerpt: 'Minha tilted her chin up to the night and let the mountain count out its stars, one by one…',
 }
 
 export default function Hero() {

@@ -1,7 +1,7 @@
 'use client'
 
 import SelectCard from '@/components/ui/SelectCard'
-import { ArtStyle, ImageQuality, WizardFormData } from '@/types'
+import { ArtStyle, WizardFormData } from '@/types'
 import StepHeader from '../StepHeader'
 
 interface Props {
@@ -21,14 +21,9 @@ const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: s
 ]
 
 const LENGTHS: { value: WizardFormData['length']; icon: string; label: string; pages: string }[] = [
-  { value: 'short',  icon: '📄', label: 'Short',  pages: '~5 pages' },
-  { value: 'medium', icon: '📖', label: 'Medium', pages: '~10 pages' },
-  { value: 'long',   icon: '📚', label: 'Long',   pages: '~15 pages' },
-]
-
-const QUALITIES: { value: ImageQuality; icon: string; label: string; description: string }[] = [
-  { value: 'standard', icon: '🖼️', label: 'Standard', description: 'Fast & affordable' },
-  { value: 'high',     icon: '🌟', label: 'High',     description: 'Best quality, slower' },
+  { value: 'short',  icon: '📄', label: 'Short',  pages: '10 pages' },
+  { value: 'medium', icon: '📖', label: 'Medium', pages: '15 pages' },
+  { value: 'long',   icon: '📚', label: 'Long',   pages: '20 pages' },
 ]
 
 export default function StepStyle({ data, onChange }: Props) {
@@ -75,22 +70,6 @@ export default function StepStyle({ data, onChange }: Props) {
           </div>
         </div>
 
-        <div>
-          <p className="text-sm font-medium text-ink mb-3">Image quality</p>
-          <div className="grid grid-cols-2 gap-3">
-            {QUALITIES.map((q) => (
-              <SelectCard
-                key={q.value}
-                icon={q.icon}
-                label={q.label}
-                description={q.description}
-                tone="accent"
-                selected={data.image_quality === q.value}
-                onClick={() => onChange({ image_quality: q.value })}
-              />
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   )

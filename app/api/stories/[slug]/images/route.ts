@@ -3,7 +3,7 @@ import { generateImage } from '@/lib/ai/generate-image'
 import { supabase } from '@/lib/supabase'
 import { maybeAlertProviderQuota } from '@/lib/alerts'
 import { refundFailedGen } from '@/lib/credits'
-import { ArtStyle, ImageQuality } from '@/types'
+import { ArtStyle } from '@/types'
 
 export const maxDuration = 300
 
@@ -36,7 +36,6 @@ export async function GET(
     const form = typeof rawForm === 'string' ? JSON.parse(rawForm) : rawForm
     console.log(`[images ${slug}] pages type=${typeof rawPages} count=${pages.length}`)
 
-    const imageQuality: ImageQuality = form?.image_quality || 'standard'
     const artStyle: ArtStyle = form?.art_style || 'comic-book'
 
     const encoder = new TextEncoder()
@@ -82,7 +81,7 @@ export async function GET(
           }
 
           try {
-            const buffer = await generateImage(page.scene_description, artStyle, imageQuality)
+            const buffer = await generateImage(page.scene_description, artStyle)
 
             const { error: uploadError } = await supabase.storage
               .from(BUCKET)

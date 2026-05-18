@@ -13,12 +13,22 @@ function getAgeTier(age: number) {
 }
 
 function getPageCount(length: string) {
-  if (length === 'short') return 6
-  if (length === 'long')  return 14
-  return 10
+  if (length === 'short') return 10
+  if (length === 'long')  return 20
+  return 15 // medium (default)
 }
 
-export async function generateStory(form: WizardFormData): Promise<{ title: string; character_sheet: string; pages: StoryPage[] }> {
+export interface StoryOutline {
+  premise: string
+  setup: string
+  inciting_incident: string
+  midpoint_shift: string
+  climax: string
+  resolution: string
+  page_beats: string[]
+}
+
+export async function generateStory(form: WizardFormData): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
   const tier      = getAgeTier(form.child_age)
   const pageCount = getPageCount(form.length)
   const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['comic-book']
@@ -66,6 +76,13 @@ ${voice.voice_prompt}
 DEPTH DIRECTIVES (apply across the full story):
 ${depthBlock}
 
+NARRATIVE PLAN — DO THIS FIRST:
+Populate the "story_outline" field BEFORE writing any page text. The outline must specify:
+- A one-sentence premise (logline).
+- A clear five-beat arc — setup, inciting incident, midpoint shift, climax, resolution.
+- A one-line beat for each of the ${pageCount} story pages (excluding cover and end), in order.
+The page texts you write afterward MUST hit the beats you listed. A satisfying arc beats a long story: the inciting incident should hit early (around page 2-3), the climax should land near the end, and the lesson must be EARNED by the climax — not stated by it.
+
 Generate exactly ${pageCount + 2} pages: 1 cover (page_number 0, type "cover") + ${pageCount} story pages (page_number 1..${pageCount}) + 1 end page (page_number ${pageCount + 1}, type "end").
 
 Call the return_story tool with the finished storybook.
@@ -93,7 +110,7 @@ CRITICAL RULES:
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 8000,
+    max_tokens: 12000,
     tools: [
       {
         name: 'return_story',
@@ -103,6 +120,26 @@ CRITICAL RULES:
           properties: {
             title:           { type: 'string', description: `Creative story title featuring ${form.child_name}` },
             character_sheet: { type: 'string', description: 'Dense single paragraph describing the hero\'s exact appearance + fixed outfit, pasted verbatim into every scene_description.' },
+            story_outline: {
+              type: 'object',
+              description: 'Full narrative arc, populated BEFORE writing any pages. The page texts must hit these beats.',
+              properties: {
+                premise:           { type: 'string', description: 'One-sentence logline of the whole story.' },
+                setup:             { type: 'string', description: 'What the hero starts with — ordinary world, want, flaw.' },
+                inciting_incident: { type: 'string', description: 'The disruption that kicks off the journey (around page 2-3).' },
+                midpoint_shift:    { type: 'string', description: 'The moment things complicate or the hero changes approach (middle of story).' },
+                climax:            { type: 'string', description: 'The decisive moment that delivers the lesson (near the end).' },
+                resolution:        { type: 'string', description: 'How the hero ends up changed — concrete payoff of the lesson.' },
+                page_beats: {
+                  type: 'array',
+                  description: `One-line beat for each of the ${pageCount} story pages in order (NOT cover, NOT end). Must have exactly ${pageCount} items.`,
+                  items: { type: 'string' },
+                  minItems: pageCount,
+                  maxItems: pageCount,
+                },
+              },
+              required: ['premise', 'setup', 'inciting_incident', 'midpoint_shift', 'climax', 'resolution', 'page_beats'],
+            },
             pages: {
               type: 'array',
               items: pageSchema,
@@ -110,7 +147,7 @@ CRITICAL RULES:
               maxItems: pageCount + 2,
             },
           },
-          required: ['title', 'character_sheet', 'pages'],
+          required: ['title', 'character_sheet', 'story_outline', 'pages'],
         },
       },
     ],
@@ -123,7 +160,7 @@ CRITICAL RULES:
     throw new Error('Claude did not call return_story tool')
   }
 
-  return toolUse.input as { title: string; character_sheet: string; pages: StoryPage[] }
+  return toolUse.input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
 }
 
 // Shape returned by Claude (before DB ids are added)

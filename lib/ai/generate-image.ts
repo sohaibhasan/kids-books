@@ -1,4 +1,4 @@
-import { ArtStyle, ImageQuality } from '@/types'
+import { ArtStyle } from '@/types'
 import { STYLE_PREFIXES } from './index'
 
 // ---------------------------------------------------------------------------
@@ -41,19 +41,18 @@ function selectProvider(style: ArtStyle): ImageProvider {
 export async function generateImage(
   prompt: string,
   style: ArtStyle,
-  quality: ImageQuality = 'standard'
 ): Promise<Buffer> {
   const provider = selectProvider(style)
 
   switch (provider) {
     case 'openai':
-      return generateWithOpenAI(prompt, quality)
+      return generateWithOpenAI(prompt)
     case 'recraft':
-      return generateWithRecraft(prompt, style, quality)
+      return generateWithRecraft(prompt, style)
     case 'fal':
-      return generateWithFal(prompt, quality)
+      return generateWithFal(prompt)
     case 'google':
-      return generateWithGoogle(prompt, quality)
+      return generateWithGoogle(prompt)
   }
 }
 
@@ -63,7 +62,7 @@ export async function generateImage(
 
 const OPENAI_URL = 'https://api.openai.com/v1/images/generations'
 
-async function generateWithOpenAI(prompt: string, quality: ImageQuality): Promise<Buffer> {
+async function generateWithOpenAI(prompt: string): Promise<Buffer> {
   const res = await fetch(OPENAI_URL, {
     method: 'POST',
     headers: {
@@ -75,7 +74,7 @@ async function generateWithOpenAI(prompt: string, quality: ImageQuality): Promis
       prompt,
       n: 1,
       size: '1024x1024',
-      quality: quality === 'high' ? 'high' : 'low',
+      quality: 'high',
     }),
   })
 
@@ -167,7 +166,7 @@ const RECRAFT_SUBSTYLE_MAP: Partial<Record<ArtStyle, string>> = {
   // paper-collage and bold-modern don't have matching V4 substyles — prompt-driven
 }
 
-async function generateWithRecraft(prompt: string, style: ArtStyle, _quality: ImageQuality): Promise<Buffer> {
+async function generateWithRecraft(prompt: string, style: ArtStyle): Promise<Buffer> {
   const condensedPrompt = condenseForRecraft(prompt)
   const body: Record<string, unknown> = {
     prompt: condensedPrompt,
@@ -221,7 +220,7 @@ async function generateWithRecraft(prompt: string, style: ArtStyle, _quality: Im
 
 const FAL_FLUX_PRO_URL = 'https://queue.fal.run/fal-ai/flux-pro/v1.1'
 
-async function generateWithFal(prompt: string, _quality: ImageQuality): Promise<Buffer> {
+async function generateWithFal(prompt: string): Promise<Buffer> {
   const falKey = process.env.FAL_KEY
   if (!falKey) throw new Error('FAL_KEY not set')
 
@@ -295,7 +294,7 @@ async function generateWithFal(prompt: string, _quality: ImageQuality): Promise<
 const GOOGLE_IMAGE_MODEL = 'gemini-3.1-flash-image-preview'
 const GOOGLE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_IMAGE_MODEL}:generateContent`
 
-async function generateWithGoogle(prompt: string, _quality: ImageQuality): Promise<Buffer> {
+async function generateWithGoogle(prompt: string): Promise<Buffer> {
   const apiKey = process.env.GOOGLE_AI_KEY
   if (!apiKey) throw new Error('GOOGLE_AI_KEY not set')
 

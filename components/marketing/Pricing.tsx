@@ -22,22 +22,37 @@ const TIERS = [
     badge: null as string | null,
     features: [
       '1 fully illustrated storybook',
-      '12 personalized pages',
+      'Up to 20 personalized pages',
       'Choose art style, voice, lesson',
       'Share via link',
     ],
   },
   {
+    key: 'solo',
+    name: 'Single',
+    price: '$3.50',
+    priceNote: 'One-time · just one story',
+    cta: 'Buy 1 story',
+    highlight: false,
+    badge: null as string | null,
+    features: [
+      '1 fully illustrated storybook',
+      'No subscription, ever',
+      'Failed generations auto-refunded',
+      'Email-link recovery across devices',
+    ],
+  },
+  {
     key: 'small',
     name: '3-pack',
-    price: '$5',
-    priceNote: 'One-time · ≈ $1.67 / story',
+    price: '$10',
+    priceNote: 'One-time · $3.33 / story',
     cta: 'Choose 3-pack',
     highlight: true,
     badge: 'Most popular',
     features: [
       '3 fully illustrated storybooks',
-      'No subscription, ever',
+      'Small per-story discount',
       'Failed generations auto-refunded',
       'Email-link recovery across devices',
     ],
@@ -45,14 +60,14 @@ const TIERS = [
   {
     key: 'large',
     name: '10-pack',
-    price: '$12',
-    priceNote: 'One-time · $1.20 / story',
+    price: '$25',
+    priceNote: 'One-time · $2.50 / story',
     cta: 'Choose 10-pack',
     highlight: false,
     badge: 'Best value',
     features: [
       '10 fully illustrated storybooks',
-      'Save 28% vs the 3-pack',
+      'Save 29% vs buying singles',
       'Failed generations auto-refunded',
       'Email-link recovery across devices',
     ],
@@ -96,7 +111,7 @@ export default function Pricing() {
           whileInView="show"
           viewport={{ once: true, margin: '-80px' }}
           variants={staggerChildren(0.08)}
-          className="grid sm:grid-cols-3 gap-5 max-w-5xl mx-auto"
+          className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto"
         >
           {TIERS.map((t) => (
             <motion.div

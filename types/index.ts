@@ -12,7 +12,6 @@ export type WritingStyle =
   | 'sensory-repetitive'
 export type Tone = 'silly' | 'heartfelt' | 'adventurous' | 'spooky-but-safe' | 'bittersweet' | 'hopeful'
 export type DepthModifier = 'plot-twist' | 'sensory-rich' | 'vocab-stretch' | 'character-arc'
-export type ImageQuality = 'standard' | 'high'
 export type PageLayout = 'full-bleed' | 'text-left' | 'text-right' | 'text-overlay'
 export type StoryStatus = 'draft' | 'generating' | 'published'
 
@@ -80,7 +79,6 @@ export interface WizardFormData {
   tone: Tone
   depth_modifiers: DepthModifier[]
   // Image quality
-  image_quality: ImageQuality
   // Extras
   dedication?: string
   language: string

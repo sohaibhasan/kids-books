@@ -43,7 +43,6 @@ const defaultData: WizardFormData = {
   writing_style: 'lyrical-imaginative',
   tone: 'adventurous',
   depth_modifiers: [],
-  image_quality: 'standard',
   language: 'English',
 }
 
