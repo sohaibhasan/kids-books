@@ -29,6 +29,13 @@ export interface StoryOutline {
 }
 
 export async function generateStory(form: WizardFormData): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
+  return generateStoryStream(form)
+}
+
+export async function generateStoryStream(
+  form: WizardFormData,
+  onProgress?: (completed: number, total: number) => void,
+): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
   const tier      = getAgeTier(form.child_age)
   const pageCount = getPageCount(form.length)
   const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['comic-book']
@@ -108,7 +115,9 @@ CRITICAL RULES:
     required: ['page_number', 'text_content', 'scene_description'],
   }
 
-  const response = await client.messages.create({
+  const expectedTotal = pageCount + 2
+
+  const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
     max_tokens: 12000,
     tools: [
@@ -154,6 +163,20 @@ CRITICAL RULES:
     tool_choice: { type: 'tool', name: 'return_story' },
     messages: [{ role: 'user', content: prompt }],
   })
+
+  if (onProgress) {
+    let lastReported = 0
+    stream.on('inputJson', (_partial, snapshot) => {
+      const snap = snapshot as { pages?: unknown[] } | undefined
+      const completed = Array.isArray(snap?.pages) ? snap!.pages!.length : 0
+      if (completed > lastReported) {
+        lastReported = completed
+        onProgress(completed, expectedTotal)
+      }
+    })
+  }
+
+  const response = await stream.finalMessage()
 
   const toolUse = response.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {

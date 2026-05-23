@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertTriangle, ArrowRight, Info, RefreshCcw, Sparkles } from 'lucide-react'
@@ -14,6 +14,8 @@ interface PageThumb {
   url?: string
 }
 
+type Phase = 'text' | 'images'
+
 interface ProgressState {
   done: boolean
   current: number
@@ -24,7 +26,20 @@ interface ProgressState {
   thumbs: PageThumb[]
 }
 
-const ROTATING_COPY = [
+interface TextProgressState {
+  completed: number
+  total: number
+}
+
+const ROTATING_COPY_TEXT = [
+  'Outlining the arc…',
+  'Choosing the opening line…',
+  'Writing the next page…',
+  'Polishing the ending…',
+  'Naming the lesson…',
+]
+
+const ROTATING_COPY_IMAGES = [
   'Sketching the cover…',
   'Mixing colors…',
   'Drawing the hero…',
@@ -35,39 +50,115 @@ const ROTATING_COPY = [
 ]
 
 const MAX_AUTO_RETRIES = 2
+const TEXT_PHASE_WEIGHT = 0.30
+const FORM_STASH_PREFIX = 'kb_wizard_form_'
 
 export default function GeneratingPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const startsInTextPhase = searchParams.get('phase') === 'text'
 
+  const [phase, setPhase] = useState<Phase>(startsInTextPhase ? 'text' : 'images')
+  const [textProgress, setTextProgress] = useState<TextProgressState>({ completed: 0, total: 0 })
   const [state, setState] = useState<ProgressState>({
     done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '', thumbs: [],
   })
   const [storyTitle, setStoryTitle] = useState('')
   const [status, setStatus] = useState<'generating' | 'error'>('generating')
   const [copyIdx, setCopyIdx] = useState(0)
-  const [retryKey, setRetryKey] = useState(0)
+  const [imagesRetryKey, setImagesRetryKey] = useState(0)
   const startRef = useRef<number>(Date.now())
   const autoRetryRef = useRef(0)
 
-  // Title
+  const rotating = phase === 'text' ? ROTATING_COPY_TEXT : ROTATING_COPY_IMAGES
+
+  // Title (available once the text-gen has inserted the row, OR from sessionStorage / fallback)
   useEffect(() => {
+    if (storyTitle) return
     fetch(`/generated/${slug}/story.json`)
-      .then((r) => r.json())
-      .then((d) => setStoryTitle(d.title))
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.title) setStoryTitle(d.title) })
       .catch(() => {})
-  }, [slug])
+  }, [slug, storyTitle, phase])
 
   // Rotating copy
   useEffect(() => {
-    const id = setInterval(() => setCopyIdx((i) => (i + 1) % ROTATING_COPY.length), 3500)
+    const id = setInterval(() => setCopyIdx((i) => (i + 1) % rotating.length), 3500)
     return () => clearInterval(id)
-  }, [])
+  }, [rotating.length])
+  useEffect(() => { setCopyIdx(0) }, [phase])
 
-  // SSE — keepalives prevent most drops, but if the stream dies anyway we
-  // consult /status to recover silently (image-existence fast path makes a
-  // re-open essentially free if the server already finished).
+  // === TEXT PHASE: POST the form to /api/stories and consume SSE from the body ===
   useEffect(() => {
+    if (phase !== 'text') return
+    let cancelled = false
+    const stashKey = `${FORM_STASH_PREFIX}${slug}`
+    const raw = sessionStorage.getItem(stashKey)
+    if (!raw) {
+      // No form in session — likely a direct visit or refresh. Fall through to image phase
+      // (server may already have created the row on a previous attempt).
+      setPhase('images')
+      return
+    }
+
+    const run = async () => {
+      try {
+        const res = await fetch('/api/stories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ form: JSON.parse(raw), slug }),
+        })
+        if (!res.ok || !res.body) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body?.error || `Story write failed (${res.status})`)
+        }
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (!cancelled) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+
+          // Parse SSE frames (data: ...\n\n)
+          let frameEnd
+          while ((frameEnd = buffer.indexOf('\n\n')) !== -1) {
+            const frame = buffer.slice(0, frameEnd)
+            buffer = buffer.slice(frameEnd + 2)
+            for (const line of frame.split('\n')) {
+              if (!line.startsWith('data: ')) continue
+              const data = JSON.parse(line.slice(6))
+              if (data.type === 'text-progress') {
+                setTextProgress({ completed: data.completed, total: data.total })
+              } else if (data.type === 'text-done') {
+                if (data.title) setStoryTitle(data.title)
+                sessionStorage.removeItem(stashKey)
+                setPhase('images')
+                return
+              } else if (data.type === 'error') {
+                throw new Error(data.message || 'Story writer error')
+              }
+            }
+          }
+        }
+      } catch (err) {
+        if (cancelled) return
+        const message = err instanceof Error ? err.message : String(err)
+        setState((p) => ({ ...p, errorMessage: message }))
+        setStatus('error')
+      }
+    }
+
+    void run()
+    return () => { cancelled = true }
+  }, [phase, slug])
+
+  // === IMAGES PHASE: existing SSE EventSource flow, unchanged behavior ===
+  useEffect(() => {
+    if (phase !== 'images') return
     let cancelled = false
     let currentEs: EventSource | null = null
     let doneArrived = false
@@ -80,7 +171,6 @@ export default function GeneratingPage() {
 
       es.onmessage = (e) => {
         const data = JSON.parse(e.data)
-
         if (data.type === 'start') {
           setState((p) => ({
             ...p,
@@ -113,15 +203,12 @@ export default function GeneratingPage() {
       }
 
       es.onerror = async () => {
-        // EventSource fires `error` on any abnormal close, including the
-        // intentional `es.close()` we just made after `done`. Ignore those.
         if (doneArrived || cancelled) {
           es.close()
           return
         }
         es.close()
 
-        // Check whether the server actually finished while we weren't looking.
         try {
           const res = await fetch(`/api/stories/${slug}/status`, { cache: 'no-store' })
           if (res.ok) {
@@ -135,7 +222,6 @@ export default function GeneratingPage() {
 
         if (autoRetryRef.current < MAX_AUTO_RETRIES) {
           autoRetryRef.current += 1
-          // Small backoff before re-opening.
           setTimeout(() => { if (!cancelled) open() }, 800)
         } else {
           setStatus('error')
@@ -144,38 +230,52 @@ export default function GeneratingPage() {
     }
 
     open()
-
     return () => {
       cancelled = true
       currentEs?.close()
     }
-  }, [slug, router, retryKey])
+  }, [phase, slug, router, imagesRetryKey])
 
-  const pct = state.total > 0 ? Math.round((state.current / state.total) * 100) : 0
-  const allFailed = state.done && state.success === 0 && state.total > 0
+  const imagePct = state.total > 0 ? Math.round((state.current / state.total) * 100) : 0
+  const textPct = textProgress.total > 0
+    ? Math.round((textProgress.completed / textProgress.total) * 100)
+    : 0
+  // Combined bar: text phase fills 0→30%, image phase fills 30→100%.
+  const combinedPct = phase === 'text'
+    ? Math.round(textPct * TEXT_PHASE_WEIGHT)
+    : Math.round(TEXT_PHASE_WEIGHT * 100 + imagePct * (1 - TEXT_PHASE_WEIGHT))
+
+  const allFailed = phase === 'images' && state.done && state.success === 0 && state.total > 0
 
   const eta = useMemo(() => {
-    if (state.current === 0 || state.total === 0) return null
+    if (phase !== 'images' || state.current === 0 || state.total === 0) return null
     const elapsed = (Date.now() - startRef.current) / 1000
     const perPage = elapsed / state.current
     const remaining = Math.round(perPage * (state.total - state.current))
     if (remaining <= 0) return null
     if (remaining < 60) return `~${remaining}s left`
     return `~${Math.ceil(remaining / 60)} min left`
-  }, [state.current, state.total])
+  }, [phase, state.current, state.total])
 
   if (status === 'error' || allFailed) {
     return <ErrorState message={state.errorMessage} total={state.total} onRetry={() => {
       autoRetryRef.current = 0
       setStatus('generating')
       setState({ done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '', thumbs: [] })
-      setRetryKey((k) => k + 1)
+      // Text-phase failure has no row to recover; jump straight to images so a manual recovery
+      // can pick up if the row exists from a prior partial attempt.
+      setPhase('images')
+      setImagesRetryKey((k) => k + 1)
     }} />
   }
 
+  const eyebrow = phase === 'text' ? 'Writing your story' : (state.done ? 'Story ready' : 'Creating your story')
+  const headline = phase === 'text'
+    ? (storyTitle || 'Your story, page by page.')
+    : (storyTitle || 'Your story, page by page.')
+
   return (
     <div className="min-h-dvh bg-surface flex flex-col">
-      {/* Top bar */}
       <header className="border-b border-border">
         <div className="mx-auto max-w-3xl px-5 sm:px-8 h-14 flex items-center">
           <Link href="/" className="font-display text-lg text-ink tracking-tight">
@@ -188,45 +288,41 @@ export default function GeneratingPage() {
         <div className="text-center max-w-xl mx-auto">
           <div className="inline-flex items-center gap-2 mb-5 px-3 h-7 rounded-pill bg-brand-tint text-brand-deep text-xs font-semibold uppercase tracking-wide">
             <Sparkles className="size-3.5" />
-            {state.done ? 'Story ready' : 'Creating your story'}
+            {eyebrow}
           </div>
-          {storyTitle ? (
-            <h1 className="font-display text-3xl sm:text-5xl text-ink leading-tight">{storyTitle}</h1>
-          ) : (
-            <h1 className="font-display text-3xl sm:text-5xl text-ink leading-tight">
-              Your story, page by page.
-            </h1>
-          )}
+          <h1 className="font-display text-3xl sm:text-5xl text-ink leading-tight">{headline}</h1>
 
           <div className="mt-6 h-6">
             <AnimatePresence mode="wait">
               <motion.p
-                key={ROTATING_COPY[copyIdx]}
+                key={`${phase}-${rotating[copyIdx]}`}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.3 }}
                 className="text-ink-soft"
               >
-                {state.done ? '✓ All illustrations are ready.' : ROTATING_COPY[copyIdx]}
+                {state.done ? '✓ All illustrations are ready.' : rotating[copyIdx]}
               </motion.p>
             </AnimatePresence>
           </div>
         </div>
 
-        {/* Progress */}
+        {/* Single combined progress bar — text phase fills 0-30%, image phase 30-100% */}
         <div className="mt-10 max-w-xl mx-auto">
           <div className="flex items-center justify-between mb-2 text-sm">
             <span className="text-ink-soft">
-              {state.current} of {state.total || '…'} pages
+              {phase === 'text'
+                ? 'Writing the story…'
+                : `${state.current} of ${state.total || '…'} pages illustrated`}
             </span>
-            <span className="text-ink-muted font-numeral">{pct}%{eta ? ` · ${eta}` : ''}</span>
+            <span className="text-ink-muted font-numeral">{combinedPct}%{eta ? ` · ${eta}` : ''}</span>
           </div>
-          <Progress value={pct} shimmer={!state.done} />
+          <Progress value={combinedPct} shimmer={!state.done} />
         </div>
 
-        {/* Thumbnails */}
-        {state.thumbs.length > 0 && (
+        {/* Thumbnails — only after text phase finishes */}
+        {phase === 'images' && state.thumbs.length > 0 && (
           <div className="mt-12 grid grid-cols-3 sm:grid-cols-5 gap-3 max-w-2xl mx-auto">
             {state.thumbs.map((t) => (
               <div
