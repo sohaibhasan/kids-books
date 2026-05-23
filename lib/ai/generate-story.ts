@@ -12,10 +12,14 @@ function getAgeTier(age: number) {
   return        { name: 'Independent Readers',        style: 'A full paragraph (4–6 sentences) per page. Complex narrative and dialogue.' }
 }
 
-function getPageCount(length: string) {
+export function getPageCount(length: string) {
   if (length === 'short') return 10
   if (length === 'long')  return 20
   return 15 // medium (default)
+}
+
+export function getExpectedTotal(length: string) {
+  return getPageCount(length) + 2
 }
 
 export interface StoryOutline {
@@ -119,7 +123,7 @@ CRITICAL RULES:
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
-    max_tokens: 12000,
+    max_tokens: 16000,
     tools: [
       {
         name: 'return_story',
@@ -165,12 +169,23 @@ CRITICAL RULES:
   })
 
   if (onProgress) {
-    let lastReported = 0
+    // Byte-based progress: snapshot length grows from the very first
+    // input_json_delta (Claude streams `title` first), so the bar starts
+    // moving immediately instead of waiting for `pages` to appear.
+    // ESTIMATED_BYTES is calibrated for the full tool input including
+    // title + character_sheet + story_outline + pages with the verbatim
+    // character_sheet pasted into every scene_description.
+    const estimatedBytes = 900 * expectedTotal + 3000
+    let lastSent = -1
+    let lastSentAt = 0
     stream.on('inputJson', (_partial, snapshot) => {
-      const snap = snapshot as { pages?: unknown[] } | undefined
-      const completed = Array.isArray(snap?.pages) ? snap!.pages!.length : 0
-      if (completed > lastReported) {
-        lastReported = completed
+      const bytes = snapshot == null ? 0 : JSON.stringify(snapshot).length
+      const pct = Math.min(0.99, bytes / estimatedBytes)
+      const completed = Math.round(pct * expectedTotal)
+      const now = Date.now()
+      if (completed > lastSent || now - lastSentAt > 250) {
+        lastSent = completed
+        lastSentAt = now
         onProgress(completed, expectedTotal)
       }
     })
@@ -178,12 +193,25 @@ CRITICAL RULES:
 
   const response = await stream.finalMessage()
 
+  if (response.stop_reason === 'max_tokens') {
+    throw new Error('Claude truncated the story (stop_reason=max_tokens). Try a shorter length or retry.')
+  }
+
   const toolUse = response.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {
     throw new Error('Claude did not call return_story tool')
   }
 
-  return toolUse.input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
+  const result = toolUse.input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
+
+  if (!Array.isArray(result.pages) || result.pages.length !== expectedTotal) {
+    throw new Error(`Claude returned ${result.pages?.length ?? 0} pages, expected ${expectedTotal}.`)
+  }
+
+  // Final 100% tick so the bar lands on full before the text-done event fires.
+  onProgress?.(expectedTotal, expectedTotal)
+
+  return result
 }
 
 // Shape returned by Claude (before DB ids are added)

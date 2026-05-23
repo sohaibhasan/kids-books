@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import StoryReader from '@/components/reader/StoryReader'
 
+export const dynamic = 'force-dynamic'
+
 const BUCKET = 'story-images'
 
 interface StoryPage {

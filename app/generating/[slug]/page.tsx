@@ -68,8 +68,10 @@ export default function GeneratingPage() {
   const [status, setStatus] = useState<'generating' | 'error'>('generating')
   const [copyIdx, setCopyIdx] = useState(0)
   const [imagesRetryKey, setImagesRetryKey] = useState(0)
+  const [textRetryKey, setTextRetryKey] = useState(0)
   const startRef = useRef<number>(Date.now())
   const autoRetryRef = useRef(0)
+  const textAutoRetryRef = useRef(0)
 
   const rotating = phase === 'text' ? ROTATING_COPY_TEXT : ROTATING_COPY_IMAGES
 
@@ -103,6 +105,8 @@ export default function GeneratingPage() {
     }
 
     const run = async () => {
+      let receivedServerError = false
+      let textDone = false
       try {
         const res = await fetch('/api/stories', {
           method: 'POST',
@@ -136,17 +140,36 @@ export default function GeneratingPage() {
               } else if (data.type === 'text-done') {
                 if (data.title) setStoryTitle(data.title)
                 sessionStorage.removeItem(stashKey)
+                textDone = true
                 setPhase('images')
                 return
               } else if (data.type === 'error') {
+                receivedServerError = true
                 throw new Error(data.message || 'Story writer error')
               }
             }
           }
         }
+
+        // Stream ended without a text-done frame — treat as a network drop.
+        if (!cancelled && !textDone) {
+          throw new Error('Stream ended before text-done')
+        }
       } catch (err) {
         if (cancelled) return
         const message = err instanceof Error ? err.message : String(err)
+
+        // Only auto-retry on network-class failures (fetch threw, stream cut
+        // mid-flight). NEVER auto-retry an explicit server error event — the
+        // model already produced and failed, retrying just burns another call.
+        if (!receivedServerError && textAutoRetryRef.current < MAX_AUTO_RETRIES) {
+          textAutoRetryRef.current += 1
+          setTimeout(() => {
+            if (!cancelled) setTextRetryKey((k) => k + 1)
+          }, 800)
+          return
+        }
+
         setState((p) => ({ ...p, errorMessage: message }))
         setStatus('error')
       }
@@ -154,7 +177,7 @@ export default function GeneratingPage() {
 
     void run()
     return () => { cancelled = true }
-  }, [phase, slug])
+  }, [phase, slug, textRetryKey])
 
   // === IMAGES PHASE: existing SSE EventSource flow, unchanged behavior ===
   useEffect(() => {
@@ -258,14 +281,21 @@ export default function GeneratingPage() {
   }, [phase, state.current, state.total])
 
   if (status === 'error' || allFailed) {
+    const wasTextPhase = phase === 'text'
     return <ErrorState message={state.errorMessage} total={state.total} onRetry={() => {
       autoRetryRef.current = 0
+      textAutoRetryRef.current = 0
       setStatus('generating')
       setState({ done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '', thumbs: [] })
-      // Text-phase failure has no row to recover; jump straight to images so a manual recovery
-      // can pick up if the row exists from a prior partial attempt.
-      setPhase('images')
-      setImagesRetryKey((k) => k + 1)
+      setTextProgress({ completed: 0, total: 0 })
+      if (wasTextPhase) {
+        // Re-run the text-phase POST. The route handles duplicate-slug as success,
+        // so this is safe even if a prior attempt already wrote the row.
+        setTextRetryKey((k) => k + 1)
+      } else {
+        setPhase('images')
+        setImagesRetryKey((k) => k + 1)
+      }
     }} />
   }
 

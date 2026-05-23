@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { generateStoryStream } from '@/lib/ai/generate-story'
+import { generateStoryStream, getExpectedTotal } from '@/lib/ai/generate-story'
 import { supabase } from '@/lib/supabase'
 import { getOrSetDeviceId, getFallbackHash } from '@/lib/identity'
 import { getEntitlement, consumeOne, isGloballyThrottled, PACKS } from '@/lib/credits'
@@ -59,7 +59,25 @@ export async function POST(req: NextRequest) {
       }, 15_000)
 
       try {
+        const expectedTotal = getExpectedTotal(form.length)
         send({ type: 'start' })
+        // Prime the client's textProgress.total so the bar renders > 0 immediately
+        // (without this, total=0 makes textPct=0 regardless of completed count).
+        send({ type: 'text-progress', completed: 0, total: expectedTotal })
+
+        // Idempotent retry: if a prior attempt already wrote this row (network
+        // dropped between insert and text-done), skip Claude and credit entirely.
+        const { data: existing } = await supabase
+          .from('stories')
+          .select('title')
+          .eq('slug', slug)
+          .maybeSingle()
+        if (existing) {
+          console.warn(`[POST /api/stories] row exists for slug ${slug}, skipping regeneration`)
+          send({ type: 'text-progress', completed: expectedTotal, total: expectedTotal })
+          send({ type: 'text-done', slug, title: existing.title })
+          return
+        }
 
         const story = await generateStoryStream(form, (completed, total) => {
           send({ type: 'text-progress', completed, total })
@@ -67,7 +85,7 @@ export async function POST(req: NextRequest) {
 
         const creditEventId = await consumeOne(deviceId, entitlement.kind, slug)
 
-        const { error } = await supabase.from('stories').insert({
+        const { error: insertError } = await supabase.from('stories').insert({
           slug,
           title: story.title,
           form,
@@ -77,7 +95,7 @@ export async function POST(req: NextRequest) {
           fallback_hash: fallbackHash,
           credit_event_id: creditEventId,
         })
-        if (error) throw error
+        if (insertError) throw insertError
 
         send({ type: 'text-done', slug, title: story.title })
       } catch (err) {

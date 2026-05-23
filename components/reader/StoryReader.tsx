@@ -52,8 +52,9 @@ export default function StoryReader({ title, pages }: Props) {
 
   const isCover = page.type === 'cover'
   const isEnd = page.type === 'end'
-  const storyPageCount = pages.filter((p) => !p.type).length
-  const storyPageIndex = pages.slice(0, current + 1).filter((p) => !p.type).length
+  const isStoryPage = (p: Page) => p.type !== 'cover' && p.type !== 'end'
+  const storyPageCount = pages.filter(isStoryPage).length
+  const storyPageIndex = pages.slice(0, current + 1).filter(isStoryPage).length
 
   const pageLabel = isCover ? 'Cover' : isEnd ? 'The End' : `Page ${storyPageIndex} of ${storyPageCount}`
 
