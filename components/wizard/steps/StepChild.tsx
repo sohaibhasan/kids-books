@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Camera } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
@@ -98,6 +99,8 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 export default function StepChild({ data, onChange }: Props) {
+  const [ageInput, setAgeInput] = useState(String(data.child_age))
+
   return (
     <div>
       <StepHeader
@@ -119,8 +122,17 @@ export default function StepChild({ data, onChange }: Props) {
             <Input
               label="Age"
               type="number"
-              value={data.child_age}
-              onChange={(v) => onChange({ child_age: parseInt(v) || 5 })}
+              value={ageInput}
+              onChange={(v) => {
+                setAgeInput(v)
+                const n = parseInt(v, 10)
+                if (!Number.isNaN(n)) onChange({ child_age: n })
+              }}
+              onBlur={() => {
+                if (ageInput === '' || Number.isNaN(parseInt(ageInput, 10))) {
+                  setAgeInput(String(data.child_age))
+                }
+              }}
               min={2}
               max={12}
               hint="Ages 2–12"
