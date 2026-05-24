@@ -207,15 +207,16 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 - **Identity:** signed first-party cookie `kb_device` (HMAC via `DEVICE_COOKIE_SECRET`) plus a server-side `sha256(ip + ua + accept-language)` fallback hash. Free allowance is "burnt" if either matches a prior `stories` row, so clearing cookies on the same browser/network does not reset it.
 - **Credits ledger:** `credit_events` table (event-sourced; balance = SUM of deltas). `+N` on Stripe `checkout.session.completed`, `−1` per paid generation. `unique(stripe_session)` makes the webhook idempotent.
 - **Gate point:** `app/api/stories/route.ts` resolves identity, calls `getEntitlement()` from `lib/credits.ts`, returns **402 `{ paywall: true, packs }`** before invoking Claude when the device has no free allowance and no balance.
-- **Checkout:** `POST /api/checkout { pack: 'small' | 'large' }` → Stripe Checkout Session (guest mode; prices via `STRIPE_PRICE_PACK_3` / `STRIPE_PRICE_PACK_10`). Success URL `/wizard?paid=1`; the wizard stashes in-flight `WizardFormData` in `sessionStorage` before redirect and auto-resubmits on return.
+- **Checkout:** `POST /api/checkout { pack: 'solo' | 'small' | 'large' }` → Stripe Checkout Session (guest mode; prices via `STRIPE_PRICE_PACK_1` / `STRIPE_PRICE_PACK_3` / `STRIPE_PRICE_PACK_10`). Success URL `/wizard?paid=1`; the wizard stashes in-flight `WizardFormData` in `sessionStorage` before redirect and auto-resubmits on return.
+- **Pricing (current):** $2 / 1 story, $5 / 3 stories ($1.67 ea), $15 / 10 stories ($1.50 ea — the floor, set at 1.25× worst-case generation cost). Display strings live in `lib/credits.ts` (`PACKS`); marketing copy in `components/marketing/Pricing.tsx`.
 - **Cross-device recovery:** webhook mints a `credit_claim_tokens` row and emails a magic link via Resend. `GET /api/credits/claim?token=…` rebinds the cookie to the original `source_device`.
 - **Circuit breaker:** `FREE_STORIES_PER_DAY_GLOBAL` (default 200) — free-tier requests beyond the daily ceiling get a 503.
 
 **Stripe modes:** `STRIPE_SECRET_KEY` is the **live** key in production, so `/api/checkout` always creates live Sessions (real money) regardless of the dashboard's mode toggle. The webhook handler accepts **either** signature: tries `STRIPE_WEBHOOK_SECRET` (live) first, falls back to `STRIPE_WEBHOOK_SECRET_TEST` — so the test-mode endpoint (`we_1TXkSUF5za3JxXe0RANXRsO2`) stays useful for CLI replays / dashboard test events without disturbing live payments. To do a true test-mode E2E against the live URL, override `STRIPE_SECRET_KEY` on a preview branch.
 
 **Live Stripe IDs (record-keeping):**
-- Products: `prod_UWyaxMWuVSc2QZ` (3-pack), `prod_UWyaeSceVGi94F` (10-pack)
-- Prices: `price_1TXud4FVsOo5w5LqBg3jubuB` ($5/3 stories), `price_1TXud4FVsOo5w5LqfvOeqHcc` ($12/10 stories)
+- Products: `prod_UXLI2hVY8QaTNL` (1-story), `prod_UWyaxMWuVSc2QZ` (3-pack), `prod_UWyaeSceVGi94F` (10-pack)
+- Prices (active, 2026-05-23 onward): `price_1TYGcEFVsOo5w5LqQJXr56YW` ($2 · 1 story), `price_1TaRwIFVsOo5w5Lq2a5kX2Qy` ($5 · 3 stories), `price_1TaRv4FVsOo5w5Lq7R199QWu` ($15 · 10 stories). Older prices ($3.50 / $10 / $25 and $5 / $12) are archived.
 - Webhook: `we_1TXud5FVsOo5w5LqhmYkqhnL` → `https://storybookstudio.org/api/stripe/webhook`, event `checkout.session.completed`
 
 **Resend:** sending domain is `support.storybookstudio.org` (verified). `EMAIL_FROM = "Storybook Studio <hello@support.storybookstudio.org>"`. The apex `storybookstudio.org` is **not** verified in Resend — don't change EMAIL_FROM to use the apex without re-verifying.

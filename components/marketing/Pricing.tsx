@@ -30,7 +30,7 @@ const TIERS = [
   {
     key: 'solo',
     name: 'Single',
-    price: '$3.50',
+    price: '$2',
     priceNote: 'One-time · just one story',
     cta: 'Buy 1 story',
     highlight: false,
@@ -45,8 +45,8 @@ const TIERS = [
   {
     key: 'small',
     name: '3-pack',
-    price: '$10',
-    priceNote: 'One-time · $3.33 / story',
+    price: '$5',
+    priceNote: 'One-time · $1.67 / story',
     cta: 'Choose 3-pack',
     highlight: true,
     badge: 'Most popular',
@@ -60,14 +60,14 @@ const TIERS = [
   {
     key: 'large',
     name: '10-pack',
-    price: '$25',
-    priceNote: 'One-time · $2.50 / story',
+    price: '$15',
+    priceNote: 'One-time · $1.50 / story',
     cta: 'Choose 10-pack',
     highlight: false,
     badge: 'Best value',
     features: [
       '10 fully illustrated storybooks',
-      'Save 29% vs buying singles',
+      'Save 25% vs buying singles',
       'Failed generations auto-refunded',
       'Email-link recovery across devices',
     ],

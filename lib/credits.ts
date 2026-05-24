@@ -6,9 +6,9 @@ export type Entitlement =
   | { kind: 'none'; balance: 0 }
 
 export const PACKS: Record<string, { credits: number; priceEnv: string; label: string; price: string }> = {
-  solo:  { credits: 1,  priceEnv: 'STRIPE_PRICE_PACK_1',  label: '1 story',    price: '$3.50' },
-  small: { credits: 3,  priceEnv: 'STRIPE_PRICE_PACK_3',  label: '3 stories',  price: '$10'   },
-  large: { credits: 10, priceEnv: 'STRIPE_PRICE_PACK_10', label: '10 stories', price: '$25'   },
+  solo:  { credits: 1,  priceEnv: 'STRIPE_PRICE_PACK_1',  label: '1 story',    price: '$2'  },
+  small: { credits: 3,  priceEnv: 'STRIPE_PRICE_PACK_3',  label: '3 stories',  price: '$5'  },
+  large: { credits: 10, priceEnv: 'STRIPE_PRICE_PACK_10', label: '10 stories', price: '$15' },
 }
 
 const FREE_GLOBAL_DAILY = Number(process.env.FREE_STORIES_PER_DAY_GLOBAL ?? 200)
