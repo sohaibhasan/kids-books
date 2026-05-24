@@ -1,12 +1,62 @@
 # Project State
 
-Last updated: 2026-04-12
+Last updated: 2026-05-24
 
 ---
 
-## Current Phase: Phase 2b — Story Polish + UX
+## Current Phase: Post-Phase 3 — Live in production
 
-Phase 2a complete and live. All 8 art aesthetics are wired to their providers and deployed.
+Live at https://storybookstudio.org with freemium gating, the Phase 2c
+visual redesign, multi-provider image routing, and the writing-voice
+system. CLAUDE.md is the canonical engineering reference; this file
+tracks completed phases and what's still on the roadmap.
+
+### Phase 2b.1 — Writing Voice & Depth ✅ Complete
+
+- [x] 8 writing-voice presets in `lib/ai/writing-styles.ts` (rhyming, pastoral, deadpan, lyrical, mischievous, contemplative, vocab-stretching, sensory)
+- [x] 6 tones (silly, heartfelt, adventurous, spooky-but-safe, bittersweet, hopeful)
+- [x] 4 opt-in depth modifiers (plot-twist, sensory-rich, vocab-stretch, character-arc)
+- [x] New `StepVoice` wizard step; voice + tone + depth injected into Claude prompt
+
+### Phase 2c — Visual Redesign ✅ Complete
+
+- [x] New design system in `app/globals.css` (warm-modern palette, Fraunces+Inter+Fredoka, soft elevation, motion tokens) exposed to Tailwind via `@theme inline`
+- [x] Bespoke primitives rebuilt + new ones added (Card, Badge, Chip, Progress, Stepper, IconButton, Toast, Select)
+- [x] Marketing landing rewrite (Header, Hero, HowItWorks, SampleShowcase, BottomCTA, Footer)
+- [x] Wizard chrome with sticky footer nav, AnimatePresence step transitions, toast errors, jump-to-edit review with cover preview
+- [x] Generating screen with rotating copy + real per-page thumbnail grid (powered by extended SSE `url` field)
+- [x] Reader with auto-hiding chrome, slide+fade transitions, swipe gestures, glass IconButton chevrons, Scrubber, SharePopover, Fraunces drop-cap story prose
+- [x] `prefers-reduced-motion` honored globally
+
+### Phase 3 — Monetization (Freemium) ✅ Complete
+
+- [x] Signed `kb_device` cookie + `sha256(ip+ua+lang)` fallback hash (`lib/identity.ts`)
+- [x] Event-sourced credit ledger (`credit_events` table, `lib/credits.ts`)
+- [x] Stripe Checkout in guest mode; webhook handler accepts live + test signatures
+- [x] Magic-link cross-device recovery via Resend (`support.storybookstudio.org` verified)
+- [x] `FREE_STORIES_PER_DAY_GLOBAL` circuit breaker
+- [x] Paywall modal triggered by 402 from `/api/stories/precheck`
+- [x] End-to-end validated in production: free gate, paywall trigger, live Checkout, credit grant + consume, magic-link delivery
+
+### Phase 3.x — Operational Polish ✅ Complete
+
+- [x] Text-gen streaming — `POST /api/stories` is now SSE (Claude `messages.stream` + tool_use). Single combined progress bar fills 0–30% (text) / 30–100% (images)
+- [x] `POST /api/stories/precheck` — entitlement pre-flight + slug; lets the wizard show paywall or redirect within ~1s
+- [x] `GET /api/stories/[slug]/status` — drop-recovery probe; the generating page falls back to it when SSE dies mid-flight
+- [x] Idempotent regeneration on slug — re-POST after a drop skips Claude + credit consume
+- [x] Required `story_outline` (premise + 5-beat arc + per-page beats) before pages so longer stories don't meander
+- [x] Page counts bumped to 10 / 15 / 20 (was 6 / 10 / 14); `max_tokens=16000`; `stop_reason='max_tokens'` is a hard error so no truncated rows land in Supabase
+- [x] Image quality unified — Standard/High toggle removed; every provider runs at its highest tier
+- [x] Auto-refund (`refund_failed_gen` credit_event) when image gen yields zero successful pages; false-positive "all illustrations failed" toast fixed
+- [x] Provider quota alerts — `lib/alerts.ts` + `provider_alerts` table + `ALERT_EMAIL` env var; 402/429 emails debounced to 1/hour/provider
+- [x] Solo tier added + packs repriced: $3.50 / 1 story, $10 / 3-pack, $25 / 10-pack (new `STRIPE_PRICE_PACK_1` env var)
+- [x] `components/marketing/Pricing.tsx` — 4-tier landing-page pricing block
+- [x] Hero + showcase refreshed with real recent cover art (Mountain of Stars / Ghibli featured)
+- [x] Wizard polish: age field clearable, eye-color picker shows real swatches
+
+---
+
+## Phase 2a Tasks ✅ Complete
 
 ### Phase 2a Tasks ✅ Complete
 
@@ -92,15 +142,16 @@ Phase 2a complete and live. All 8 art aesthetics are wired to their providers an
 
 ---
 
-## Deferred to Phase 2b+
+## Deferred to Phase 4+
 
 - Storyboard editor (reorder, edit text, regenerate individual images)
 - FLUX.1 Kontext character consistency upgrade (reference image → all pages)
-- Read-aloud (browser TTS)
+- Read-aloud (browser TTS or pre-generated audio per page)
 - Night mode
-- User accounts / story library
-- Bilingual support
-- Stripe / monetization
+- Narrative structure presets, POV selector
+- Bilingual output
+- User accounts / story library / gallery
+- Subscriptions, print-on-demand, classroom accounts
 
 ---
 

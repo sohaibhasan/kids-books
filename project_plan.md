@@ -101,7 +101,7 @@ For each page:
 
 1. Story text is finalized.
 2. A **scene description prompt** is auto-generated from the text (setting, characters present, action, mood, time of day).
-3. The illustration is generated via the Google Gemini API (free tier).
+3. The illustration is generated via the live **multi-provider image router** in `lib/ai/generate-image.ts` — the wizard's `art_style` selection picks among 8 book-inspired aesthetics, each routed to its best-fit provider (OpenAI gpt-image-1, Recraft V4, fal.ai FLUX, Google Nano Banana 2 as free-tier fallback). See `docs/image-gen-options.md` for the full provider/aesthetic mapping.
 4. User can **regenerate**, **adjust** (e.g., "make it nighttime"), or **upload their own** drawing.
 
 ---
@@ -142,7 +142,7 @@ Each card shows:
 | State Management | Zustand or React Context | Lightweight, sufficient for wizard + editor state |
 | Backend / API | Next.js API routes or a separate Node/Python service | Handles story generation, image generation calls |
 | AI Story Generation | Anthropic Claude API (or OpenAI) | Generates age-appropriate narrative text |
-| AI Image Generation | Google Gemini API (free tier) | Generates illustrations from scene prompts; free tier reduces cost to zero at MVP stage |
+| AI Image Generation | Multi-provider router — OpenAI, Recraft V4, fal.ai (FLUX), Google Nano Banana 2 (free fallback) | Each book-inspired art style routes to the provider that renders it best (see `docs/image-gen-options.md`) |
 | Database | PostgreSQL (via Supabase or PlanetScale) | Stores stories, user accounts, image URLs |
 | File Storage | AWS S3 or Cloudflare R2 | Stores generated images |
 | Auth | Clerk, NextAuth, or Supabase Auth | User accounts (optional for creators, not needed for readers) |
@@ -231,6 +231,8 @@ https://yourdomain.com/read/luna-and-the-starfish-a3f9x2
 ---
 
 ## 9. Development Phases
+
+> **Implementation status (2026-05):** Phase 1 (MVP), Phase 2 (multi-provider images, writing voice, end-to-end visual redesign), and Phase 4 (Stripe-based monetization — credit packs rather than subscriptions) all shipped. Phase 3 items (user accounts, gallery, bilingual support, age-tier vocab control) are deferred. Phase 2 polish items still on the roadmap: storyboard editor, read-aloud, night mode. See `CLAUDE.md` for the canonical live state of the codebase.
 
 ### Phase 1 — MVP (Weeks 1–4)
 - Story creation wizard (basic: name, genre, theme, length)
