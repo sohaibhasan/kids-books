@@ -53,7 +53,6 @@ const ROTATING_COPY_IMAGES = [
 const MAX_AUTO_RETRIES = 2
 const MAX_PARTIAL_RETRIES = 5
 const PARTIAL_RETRY_BACKOFF_MS = [1000, 2000, 4000, 4000, 4000]
-const TEXT_PHASE_WEIGHT = 0.30
 const FORM_STASH_PREFIX = 'kb_wizard_form_'
 
 export default function GeneratingPage() {
@@ -141,7 +140,10 @@ export default function GeneratingPage() {
               if (!line.startsWith('data: ')) continue
               const data = JSON.parse(line.slice(6))
               if (data.type === 'text-progress') {
-                setTextProgress({ completed: data.completed, total: data.total })
+                setTextProgress((p) => ({
+                  total: data.total,
+                  completed: Math.max(p.completed, data.completed),
+                }))
               } else if (data.type === 'text-done') {
                 if (data.title) setStoryTitle(data.title)
                 sessionStorage.removeItem(stashKey)
@@ -334,10 +336,7 @@ export default function GeneratingPage() {
   const textPct = textProgress.total > 0
     ? Math.round((textProgress.completed / textProgress.total) * 100)
     : 0
-  // Combined bar: text phase fills 0→30%, image phase fills 30→100%.
-  const combinedPct = phase === 'text'
-    ? Math.round(textPct * TEXT_PHASE_WEIGHT)
-    : Math.round(TEXT_PHASE_WEIGHT * 100 + imagePct * (1 - TEXT_PHASE_WEIGHT))
+  const phasePct = phase === 'text' ? textPct : imagePct
 
   const eta = useMemo(() => {
     if (phase !== 'images' || state.current === 0 || state.total === 0) return null
@@ -415,17 +414,19 @@ export default function GeneratingPage() {
           </div>
         </div>
 
-        {/* Single combined progress bar — text phase fills 0-30%, image phase 30-100% */}
-        <div className="mt-10 max-w-xl mx-auto">
+        {/* Two-stage bar: text fills 0→100%, then image-gen starts fresh at 0→100% */}
+        <div className="mt-10 max-w-xl mx-auto" key={phase}>
           <div className="flex items-center justify-between mb-2 text-sm">
             <span className="text-ink-soft">
               {phase === 'text'
                 ? 'Writing the story…'
                 : `${state.current} of ${state.total || '…'} pages illustrated`}
             </span>
-            <span className="text-ink-muted font-numeral">{combinedPct}%{eta ? ` · ${eta}` : ''}</span>
+            <span className="text-ink-muted font-numeral">
+              {phasePct}%{phase === 'images' && eta ? ` · ${eta}` : ''}
+            </span>
           </div>
-          <Progress value={combinedPct} shimmer={!state.done} />
+          <Progress value={phasePct} shimmer={!state.done} />
         </div>
 
         {/* Thumbnails — only after text phase finishes */}

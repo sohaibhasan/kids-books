@@ -177,15 +177,17 @@ CRITICAL RULES:
     // character_sheet pasted into every scene_description.
     const estimatedBytes = 900 * expectedTotal + 3000
     let lastSent = -1
-    let lastSentAt = 0
+    let lastPct = 0
     stream.on('inputJson', (_partial, snapshot) => {
       const bytes = snapshot == null ? 0 : JSON.stringify(snapshot).length
-      const pct = Math.min(0.99, bytes / estimatedBytes)
+      const rawPct = Math.min(0.99, bytes / estimatedBytes)
+      // Snapshot byte length can briefly shrink as partial JSON is re-parsed;
+      // clamp so progress is strictly monotonic.
+      const pct = Math.max(rawPct, lastPct)
+      lastPct = pct
       const completed = Math.round(pct * expectedTotal)
-      const now = Date.now()
-      if (completed > lastSent || now - lastSentAt > 250) {
+      if (completed > lastSent) {
         lastSent = completed
-        lastSentAt = now
         onProgress(completed, expectedTotal)
       }
     })
