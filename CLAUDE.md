@@ -51,7 +51,8 @@ components/
   marketing/                      ← Header, Hero, HowItWorks, SampleShowcase, BottomCTA, Footer
   wizard/WizardContainer.tsx      ← Wizard state + navigation (7 steps), ToastProvider, AnimatePresence
   wizard/StepHeader.tsx           ← Eyebrow + title + description per step
-  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepReview
+  wizard/StoryPreview.tsx         ← Sticky right-side "Your story so far" panel (lg+), fills in section-by-section as user advances through steps
+  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepReview (each exports its option arrays — SKIN_TONES, GENRES, LESSONS, etc. — reused by StoryPreview)
   reader/StoryReader.tsx          ← Page-by-page reader client component
   reader/ReaderChrome.tsx         ← Auto-hiding floating top bar
   reader/Scrubber.tsx             ← Page scrubber with hover thumbnails

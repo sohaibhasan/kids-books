@@ -9,7 +9,7 @@ interface Props {
   onChange: (fields: Partial<WizardFormData>) => void
 }
 
-const GENRES: { value: Genre; icon: string; label: string; description: string; tone: SelectCardTone }[] = [
+export const GENRES: { value: Genre; icon: string; label: string; description: string; tone: SelectCardTone }[] = [
   { value: 'fantasy',    icon: '🐉', label: 'Fantasy',          description: 'Magic, creatures & quests',  tone: 'lavender' },
   { value: 'adventure',  icon: '🗺️', label: 'Adventure',        description: 'Exploration & treasure',     tone: 'apricot' },
   { value: 'sci-fi',     icon: '🚀', label: 'Sci-Fi',           description: 'Space, robots & future',     tone: 'sky' },

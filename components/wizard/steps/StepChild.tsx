@@ -21,7 +21,7 @@ const PRONOUNS = [
   { label: 'They / Them', icon: '🧒' },
 ]
 
-const SKIN_TONES = [
+export const SKIN_TONES = [
   { value: 'light',       label: 'Light',       color: '#FDDCB5' },
   { value: 'fair',        label: 'Fair',        color: '#F5C5A3' },
   { value: 'medium',      label: 'Medium',      color: '#D4A373' },
@@ -32,7 +32,7 @@ const SKIN_TONES = [
 
 const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red', 'Auburn', 'Strawberry Blonde']
 const HAIR_STYLES = ['Straight and short', 'Straight and long', 'Wavy and short', 'Wavy and long', 'Curly and short', 'Curly and long', 'Coily / afro', 'Braids', 'Ponytail', 'Two puffs', 'Pigtails', 'Bun', 'Buzz cut']
-const EYE_COLORS = [
+export const EYE_COLORS = [
   { value: 'brown',       label: 'Brown',       color: '#5C3310' },
   { value: 'dark brown',  label: 'Dark Brown',  color: '#2B1A0C' },
   { value: 'hazel',       label: 'Hazel',       color: '#A47148' },
@@ -41,7 +41,7 @@ const EYE_COLORS = [
   { value: 'gray',        label: 'Gray',        color: '#8E9CA8' },
 ]
 
-const OUTFITS = [
+export const OUTFITS = [
   { value: 'a bright red hoodie with a yellow star on the chest, blue jeans, and white sneakers', label: 'Red Hoodie', icon: '🔴' },
   { value: 'a purple t-shirt with a rainbow on it, green shorts, and yellow rain boots', label: 'Rainbow Tee', icon: '🌈' },
   { value: 'a blue denim jacket over a striped white-and-navy shirt, khaki pants, and brown boots', label: 'Denim Jacket', icon: '🧥' },

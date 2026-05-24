@@ -18,6 +18,7 @@ import StepSetting from './steps/StepSetting'
 import StepStyle from './steps/StepStyle'
 import StepVoice from './steps/StepVoice'
 import StepReview from './steps/StepReview'
+import StoryPreview from './StoryPreview'
 
 const STEP_LABELS = ['About', 'Genre', 'Lesson', 'World', 'Style', 'Voice', 'Review']
 const TOTAL_STEPS = STEP_LABELS.length
@@ -63,6 +64,7 @@ function WizardInner() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [step, setStep] = useState(1)
+  const [furthestStep, setFurthestStep] = useState(1)
   const [data, setData] = useState<WizardFormData>(defaultData)
   const [submitting, setSubmitting] = useState(false)
   const [paywall, setPaywall] = useState<{ open: boolean; packs: PaywallPack[] }>({ open: false, packs: [] })
@@ -73,7 +75,9 @@ function WizardInner() {
 
   const goTo = (target: number) => {
     directionRef.current = target > step ? 1 : -1
-    setStep(Math.min(Math.max(target, 1), TOTAL_STEPS))
+    const clamped = Math.min(Math.max(target, 1), TOTAL_STEPS)
+    setStep(clamped)
+    setFurthestStep((prev) => Math.max(prev, clamped))
   }
   const next = () => goTo(step + 1)
   const back = () => goTo(step - 1)
@@ -126,6 +130,7 @@ function WizardInner() {
         const form = JSON.parse(stashed) as WizardFormData
         setData(form)
         setStep(7)
+        setFurthestStep(7)
         toast({ tone: 'success', title: 'Payment received', description: 'Picking up where you left off.' })
         void submit(form)
         return
@@ -181,21 +186,27 @@ function WizardInner() {
 
       {/* Card */}
       <main className="flex-1">
-        <div className="mx-auto max-w-3xl px-5 sm:px-8 py-8 md:py-12">
-          <div className="bg-surface-raised rounded-xl shadow-md p-5 sm:p-8 md:p-10">
-            <AnimatePresence mode="wait" custom={directionRef.current} initial={false}>
-              <motion.form
-                key={step}
-                custom={directionRef.current}
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                onSubmit={(e) => e.preventDefault()}
-              >
-                {stepContent}
-              </motion.form>
-            </AnimatePresence>
+        <div className="mx-auto max-w-3xl lg:max-w-6xl px-5 sm:px-8 py-8 md:py-12">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
+            <div className="bg-surface-raised rounded-xl shadow-md p-5 sm:p-8 md:p-10">
+              <AnimatePresence mode="wait" custom={directionRef.current} initial={false}>
+                <motion.form
+                  key={step}
+                  custom={directionRef.current}
+                  variants={stepVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  onSubmit={(e) => e.preventDefault()}
+                >
+                  {stepContent}
+                </motion.form>
+              </AnimatePresence>
+            </div>
+
+            <div className="hidden lg:block lg:sticky lg:top-28">
+              <StoryPreview data={data} step={furthestStep} />
+            </div>
           </div>
         </div>
       </main>

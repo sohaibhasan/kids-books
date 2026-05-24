@@ -10,7 +10,7 @@ interface Props {
   onChange: (fields: Partial<WizardFormData>) => void
 }
 
-const SETTINGS = [
+export const SETTINGS = [
   { value: 'Enchanted Forest',   icon: '🌲', label: 'Enchanted Forest' },
   { value: 'Outer Space',        icon: '🌌', label: 'Outer Space' },
   { value: 'Underwater Kingdom', icon: '🐠', label: 'Underwater' },
@@ -21,7 +21,7 @@ const SETTINGS = [
   { value: 'Snowy Mountains',    icon: '⛰️', label: 'Snowy Mountains' },
 ]
 
-const COMPANIONS = [
+export const COMPANIONS = [
   { value: 'Best Friend',      icon: '👫', label: 'Best Friend' },
   { value: 'Sibling',          icon: '👧', label: 'Sibling' },
   { value: 'Pet',              icon: '🐕', label: 'Pet' },

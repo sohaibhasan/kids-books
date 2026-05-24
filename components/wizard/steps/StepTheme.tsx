@@ -9,7 +9,7 @@ interface Props {
   onChange: (fields: Partial<WizardFormData>) => void
 }
 
-const LESSONS: { value: string; icon: string; label: string }[] = [
+export const LESSONS: { value: string; icon: string; label: string }[] = [
   { value: 'Kindness',           icon: '❤️',  label: 'Kindness' },
   { value: 'Bravery',            icon: '🦁',  label: 'Bravery' },
   { value: 'Honesty',            icon: '💎',  label: 'Honesty' },

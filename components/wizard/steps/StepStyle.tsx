@@ -9,7 +9,7 @@ interface Props {
   onChange: (fields: Partial<WizardFormData>) => void
 }
 
-const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: string }[] = [
+export const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: string }[] = [
   { value: 'comic-book',         icon: '💥', label: 'Comic Book',         description: 'Bold outlines, flat colors, action energy' },
   { value: 'classic-watercolor', icon: '🎨', label: 'Classic Watercolor', description: 'Soft washes, delicate ink, warm tones' },
   { value: 'paper-collage',      icon: '✂️', label: 'Paper Collage',      description: 'Layered textures, bold cut-out shapes' },
@@ -20,7 +20,7 @@ const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: s
   { value: 'storybook-realism',  icon: '🎭', label: 'Storybook Realism',  description: 'Painterly detail, dramatic lighting' },
 ]
 
-const LENGTHS: { value: WizardFormData['length']; icon: string; label: string; pages: string }[] = [
+export const LENGTHS: { value: WizardFormData['length']; icon: string; label: string; pages: string }[] = [
   { value: 'short',  icon: '📄', label: 'Short',  pages: '10 pages' },
   { value: 'medium', icon: '📖', label: 'Medium', pages: '15 pages' },
   { value: 'long',   icon: '📚', label: 'Long',   pages: '20 pages' },
