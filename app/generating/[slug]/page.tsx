@@ -197,18 +197,20 @@ export default function GeneratingPage() {
     let doneArrived = false
     startRef.current = Date.now()
 
-    // If we've already abandoned this story (e.g., user revisited the URL),
-    // skip everything and jump straight to the refunded terminal state.
+    // If the story is already complete OR was previously abandoned, skip
+    // straight to the matching terminal state. images_done wins over
+    // refunded when both are true (a backfilled run can land after a stale
+    // refund row — the user gets their book either way).
     void (async () => {
       try {
         const res = await fetch(`/api/stories/${slug}/status`, { cache: 'no-store' })
         if (!res.ok) return
         const body = await res.json()
         if (cancelled) return
-        if (body.refunded) {
-          setStatus('refunded')
-        } else if (body.images_done) {
+        if (body.images_done) {
           router.push(`/read/${slug}`)
+        } else if (body.refunded) {
+          setStatus('refunded')
         }
       } catch { /* non-fatal */ }
     })()
