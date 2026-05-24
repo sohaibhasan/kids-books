@@ -9,14 +9,14 @@ const SUPABASE_PUBLIC = 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/obj
 
 const SAMPLES = [
   {
-    slug: 'minha-9zpx7',
-    title: 'Minha and the Signal from Somewhere Else',
-    tag: 'Sci-fi · Curiosity',
+    slug: 'jake-1uq15',
+    title: 'Jake and the Bees of Clover Hill Farm',
+    tag: 'Nature · Trying New Things',
   },
   {
-    slug: 'aurelio-klpv1',
-    title: 'Aurelio and the Underwater Kingdom',
-    tag: 'Nature · Discovery',
+    slug: 'john-tq6l4',
+    title: 'John and the Zoomberry Star',
+    tag: 'Sci-fi · Resilience',
   },
   {
     slug: 'aamilah-u9n5m',
