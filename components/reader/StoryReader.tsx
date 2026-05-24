@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ImageOff, Sparkles } from 'lucide-react'
 import IconButton from '@/components/ui/IconButton'
 import Button from '@/components/ui/Button'
 import { readerPageVariants } from '@/lib/motion'
@@ -117,11 +117,11 @@ export default function StoryReader({ title, pages }: Props) {
               className="touch-pan-y"
             >
               {isCover ? (
-                <CoverLayout title={title} url={page.illustration_url} alt={page.scene_description} />
+                <CoverLayout title={title} url={page.illustration_url} alt={`Cover illustration for “${title}”`} />
               ) : isEnd ? (
-                <EndLayout text={page.text_content} url={page.illustration_url} alt={page.scene_description} />
+                <EndLayout text={page.text_content} url={page.illustration_url} alt={`Closing illustration for “${title}”`} />
               ) : (
-                <StoryLayout text={page.text_content} url={page.illustration_url} alt={page.scene_description} />
+                <StoryLayout text={page.text_content} url={page.illustration_url} alt={`Illustration for page ${page.page_number} of “${title}”`} />
               )}
             </motion.div>
           </AnimatePresence>
@@ -143,12 +143,36 @@ export default function StoryReader({ title, pages }: Props) {
   )
 }
 
+function PageIllustration({ url, alt, className }: { url: string; alt: string; className?: string }) {
+  const [errored, setErrored] = useState(false)
+  if (errored || !url) {
+    return (
+      <div
+        role="img"
+        aria-label={alt}
+        className={`w-full aspect-square bg-surface-sunken flex flex-col items-center justify-center text-ink-muted gap-2 ${className ?? ''}`}
+      >
+        <ImageOff className="size-8" aria-hidden />
+        <span className="text-xs">Illustration missing</span>
+      </div>
+    )
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt={alt}
+      onError={() => setErrored(true)}
+      className={`w-full aspect-square object-cover ${className ?? ''}`}
+    />
+  )
+}
+
 function CoverLayout({ title, url, alt }: { title: string; url: string; alt?: string }) {
   return (
     <div className="rounded-xl overflow-hidden shadow-xl bg-night-soft">
       <div className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={alt || ''} className="w-full aspect-square object-cover" />
+        <PageIllustration url={url} alt={alt || `Cover illustration for “${title}”`} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
           <div className="inline-flex items-center gap-2 mb-3 px-3 h-7 rounded-pill bg-white/15 backdrop-blur text-white text-[11px] font-semibold uppercase tracking-widest">
@@ -165,8 +189,7 @@ function CoverLayout({ title, url, alt }: { title: string; url: string; alt?: st
 function StoryLayout({ text, url, alt }: { text: string; url: string; alt?: string }) {
   return (
     <article className="rounded-xl overflow-hidden bg-surface-raised text-ink shadow-xl" aria-live="polite">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={alt || ''} className="w-full aspect-square object-cover" />
+      <PageIllustration url={url} alt={alt || 'Story illustration'} />
       <div className="px-6 py-7 sm:px-10 sm:py-10 font-display text-[18px] sm:text-[19px] leading-[1.75] text-ink space-y-4 max-w-[60ch] mx-auto">
         {text.split('\n\n').map((para, i) => (
           <p key={i} className={i === 0 ? 'drop-cap' : ''}>{para}</p>
@@ -180,8 +203,7 @@ function EndLayout({ text, url, alt }: { text: string; url: string; alt?: string
   const lines = text.split('\n').filter((l) => l.trim())
   return (
     <div className="rounded-xl overflow-hidden bg-night-soft text-white shadow-xl">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={url} alt={alt || ''} className="w-full aspect-square object-cover opacity-90" />
+      <PageIllustration url={url} alt={alt || 'Closing illustration'} className="opacity-90" />
       <div className="px-6 py-10 text-center space-y-4">
         <p className="font-display text-4xl sm:text-5xl text-accent">{lines[0] || 'The End'}</p>
         {lines[1] && (

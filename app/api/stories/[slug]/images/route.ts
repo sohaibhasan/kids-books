@@ -2,12 +2,12 @@ import { NextRequest } from 'next/server'
 import { generateImage } from '@/lib/ai/generate-image'
 import { supabase } from '@/lib/supabase'
 import { maybeAlertProviderQuota } from '@/lib/alerts'
-import { refundFailedGen } from '@/lib/credits'
 import { ArtStyle } from '@/types'
 
 export const maxDuration = 300
 
 const BUCKET = 'story-images'
+const PER_PAGE_ATTEMPTS = 5
 
 export async function GET(
   _req: NextRequest,
@@ -80,51 +80,71 @@ export async function GET(
             continue
           }
 
-          try {
-            const buffer = await generateImage(page.scene_description, artStyle)
+          // Per-page retry loop. The client (generating page) handles
+          // cross-run retries; this loop covers transient provider blips
+          // within a single SSE run.
+          let lastError: unknown = null
+          for (let attempt = 1; attempt <= PER_PAGE_ATTEMPTS; attempt++) {
+            if (attempt > 1) {
+              send({
+                type: 'progress',
+                page: page.page_number,
+                total: pages.length,
+                attempt,
+              })
+              const delayMs = Math.round(500 * Math.pow(1.6, attempt - 2))
+              await new Promise(r => setTimeout(r, delayMs))
+            }
+            try {
+              const buffer = await generateImage(page.scene_description, artStyle)
+              const { error: uploadError } = await supabase.storage
+                .from(BUCKET)
+                .upload(filename, buffer, { contentType: 'image/png', upsert: true })
+              if (uploadError) throw uploadError
 
-            const { error: uploadError } = await supabase.storage
-              .from(BUCKET)
-              .upload(filename, buffer, { contentType: 'image/png', upsert: true })
-
-            if (uploadError) throw uploadError
-
-            successCount++
-            const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename)
-            send({
-              type: 'progress',
-              page: page.page_number,
-              total: pages.length,
-              url: pub.publicUrl,
-            })
-          } catch (err) {
-            console.error(`[images ${slug} page ${page.page_number}]`, err)
-            void maybeAlertProviderQuota(err, `images ${slug} page ${page.page_number}`)
+              successCount++
+              const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename)
+              send({
+                type: 'progress',
+                page: page.page_number,
+                total: pages.length,
+                url: pub.publicUrl,
+              })
+              lastError = null
+              break
+            } catch (err) {
+              lastError = err
+              console.error(`[images ${slug} page ${page.page_number} attempt ${attempt}]`, err)
+              void maybeAlertProviderQuota(err, `images ${slug} page ${page.page_number}`)
+            }
+          }
+          if (lastError) {
             const message =
-              err instanceof Error
-                ? err.message
-                : typeof err === 'string'
-                ? err
+              lastError instanceof Error
+                ? lastError.message
+                : typeof lastError === 'string'
+                ? lastError
                 : (() => {
-                    try { return JSON.stringify(err) } catch { return 'Unknown error' }
+                    try { return JSON.stringify(lastError) } catch { return 'Unknown error' }
                   })()
-            send({ type: 'error', page: page.page_number, message })
+            send({
+              type: 'error',
+              page: page.page_number,
+              message,
+              attempts_used: PER_PAGE_ATTEMPTS,
+            })
           }
 
           await new Promise(r => setTimeout(r, 500))
         }
 
-        // Only mark done if all images succeeded
+        // Only mark done if all images succeeded.
+        // Partial runs no longer refund here — the client retries the SSE
+        // (skip-cached lets it re-attempt only the missing pages), and once
+        // the retry budget is exhausted it POSTs /api/stories/[slug]/abandon
+        // to trigger the refund.
         if (successCount === pages.length) {
           await supabase.from('stories').update({ images_done: true }).eq('slug', slug)
-        } else if (story.credit_event_id && story.device_id) {
-          // Paid story that didn't fully complete — refund the credit so the
-          // user can try again without losing their money. Idempotent.
-          try {
-            await refundFailedGen(story.device_id as string, slug)
-          } catch (refundErr) {
-            console.error(`[images ${slug}] refund failed`, refundErr)
-          }
         }
 
         send({ type: 'done', success: successCount, total: pages.length })

@@ -12,6 +12,7 @@ import { thumbReveal } from '@/lib/motion'
 interface PageThumb {
   page: number
   url?: string
+  attempt?: number // present when latest server event for this page was a retry (attempt ≥ 2)
 }
 
 type Phase = 'text' | 'images'
@@ -50,6 +51,8 @@ const ROTATING_COPY_IMAGES = [
 ]
 
 const MAX_AUTO_RETRIES = 2
+const MAX_PARTIAL_RETRIES = 5
+const PARTIAL_RETRY_BACKOFF_MS = [1000, 2000, 4000, 4000, 4000]
 const TEXT_PHASE_WEIGHT = 0.30
 const FORM_STASH_PREFIX = 'kb_wizard_form_'
 
@@ -65,13 +68,15 @@ export default function GeneratingPage() {
     done: false, current: 0, total: 0, errors: 0, success: 0, errorMessage: '', thumbs: [],
   })
   const [storyTitle, setStoryTitle] = useState('')
-  const [status, setStatus] = useState<'generating' | 'error'>('generating')
+  const [status, setStatus] = useState<'generating' | 'error' | 'refunded'>('generating')
   const [copyIdx, setCopyIdx] = useState(0)
   const [imagesRetryKey, setImagesRetryKey] = useState(0)
   const [textRetryKey, setTextRetryKey] = useState(0)
+  const [retryingPages, setRetryingPages] = useState(0)
   const startRef = useRef<number>(Date.now())
   const autoRetryRef = useRef(0)
   const textAutoRetryRef = useRef(0)
+  const partialRetryRef = useRef(0)
 
   const rotating = phase === 'text' ? ROTATING_COPY_TEXT : ROTATING_COPY_IMAGES
 
@@ -179,7 +184,12 @@ export default function GeneratingPage() {
     return () => { cancelled = true }
   }, [phase, slug, textRetryKey])
 
-  // === IMAGES PHASE: existing SSE EventSource flow, unchanged behavior ===
+  // === IMAGES PHASE ===
+  // Per-page retries happen in-server (up to 5 attempts per page within one
+  // SSE run). Cross-run retries happen here: if a run finishes partial, we
+  // schedule another SSE open (skip-cached on the server means it only
+  // re-attempts the missing pages). After MAX_PARTIAL_RETRIES we POST
+  // /abandon to trigger the refund and show a terminal "refunded" state.
   useEffect(() => {
     if (phase !== 'images') return
     let cancelled = false
@@ -187,8 +197,27 @@ export default function GeneratingPage() {
     let doneArrived = false
     startRef.current = Date.now()
 
+    // If we've already abandoned this story (e.g., user revisited the URL),
+    // skip everything and jump straight to the refunded terminal state.
+    void (async () => {
+      try {
+        const res = await fetch(`/api/stories/${slug}/status`, { cache: 'no-store' })
+        if (!res.ok) return
+        const body = await res.json()
+        if (cancelled) return
+        if (body.refunded) {
+          setStatus('refunded')
+        } else if (body.images_done) {
+          router.push(`/read/${slug}`)
+        }
+      } catch { /* non-fatal */ }
+    })()
+
     const open = () => {
       if (cancelled) return
+      // Each new SSE run resets the per-run progress counter; cached pages
+      // re-emit progress events and bump it back up.
+      setState((p) => ({ ...p, current: 0, errors: 0 }))
       const es = new EventSource(`/api/stories/${slug}/images`)
       currentEs = es
 
@@ -203,11 +232,21 @@ export default function GeneratingPage() {
               : Array.from({ length: data.total }, (_, i) => ({ page: i })),
           }))
         } else if (data.type === 'progress') {
+          // Two flavors:
+          //  (a) attempt-only (retry in flight): { page, attempt } with no url
+          //  (b) success: { page, url } — counts as one completed slot
+          const isAttemptEvent = typeof data.attempt === 'number' && !data.url
           setState((p) => {
-            const thumbs = p.thumbs.map((t) =>
-              t.page === data.page ? { ...t, url: data.url as string | undefined } : t,
-            )
-            return { ...p, current: p.current + 1, thumbs }
+            const thumbs = p.thumbs.map((t) => {
+              if (t.page !== data.page) return t
+              if (isAttemptEvent) return { ...t, attempt: data.attempt as number }
+              return { ...t, url: data.url as string | undefined, attempt: undefined }
+            })
+            return {
+              ...p,
+              current: isAttemptEvent ? p.current : p.current + 1,
+              thumbs,
+            }
           })
         } else if (data.type === 'error') {
           setState((p) => ({
@@ -219,9 +258,35 @@ export default function GeneratingPage() {
         } else if (data.type === 'done') {
           doneArrived = true
           const success = data.success ?? 0
-          setState((p) => ({ ...p, done: true, success }))
+          const total = data.total ?? 0
+          setState((p) => ({ ...p, done: success === total, success }))
           es.close()
-          if (success > 0) setTimeout(() => router.push(`/read/${slug}`), 900)
+
+          if (success === total && total > 0) {
+            setTimeout(() => router.push(`/read/${slug}`), 900)
+            return
+          }
+
+          // Partial result — schedule cross-run retry or abandon.
+          const missing = Math.max(0, total - success)
+          if (partialRetryRef.current < MAX_PARTIAL_RETRIES) {
+            const delay = PARTIAL_RETRY_BACKOFF_MS[partialRetryRef.current] ?? 4000
+            partialRetryRef.current += 1
+            setRetryingPages(missing)
+            setTimeout(() => {
+              if (!cancelled) {
+                setRetryingPages(0)
+                setImagesRetryKey((k) => k + 1)
+              }
+            }, delay)
+          } else {
+            // Out of budget — call abandon (refund if paid) and enter terminal state.
+            void fetch(`/api/stories/${slug}/abandon`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            }).catch(() => { /* even on failure, show the user the terminal UI */ })
+            if (!cancelled) setStatus('refunded')
+          }
         }
       }
 
@@ -238,6 +303,10 @@ export default function GeneratingPage() {
             const body = await res.json()
             if (body.images_done) {
               router.push(`/read/${slug}`)
+              return
+            }
+            if (body.refunded) {
+              setStatus('refunded')
               return
             }
           }
@@ -268,8 +337,6 @@ export default function GeneratingPage() {
     ? Math.round(textPct * TEXT_PHASE_WEIGHT)
     : Math.round(TEXT_PHASE_WEIGHT * 100 + imagePct * (1 - TEXT_PHASE_WEIGHT))
 
-  const allFailed = phase === 'images' && state.done && state.success === 0 && state.total > 0
-
   const eta = useMemo(() => {
     if (phase !== 'images' || state.current === 0 || state.total === 0) return null
     const elapsed = (Date.now() - startRef.current) / 1000
@@ -280,7 +347,11 @@ export default function GeneratingPage() {
     return `~${Math.ceil(remaining / 60)} min left`
   }, [phase, state.current, state.total])
 
-  if (status === 'error' || allFailed) {
+  if (status === 'refunded') {
+    return <RefundedState title={storyTitle} />
+  }
+
+  if (status === 'error') {
     const wasTextPhase = phase === 'text'
     return <ErrorState message={state.errorMessage} total={state.total} onRetry={() => {
       autoRetryRef.current = 0
@@ -325,14 +396,18 @@ export default function GeneratingPage() {
           <div className="mt-6 h-6">
             <AnimatePresence mode="wait">
               <motion.p
-                key={`${phase}-${rotating[copyIdx]}`}
+                key={`${phase}-${retryingPages > 0 ? `retry-${retryingPages}` : rotating[copyIdx]}`}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.3 }}
                 className="text-ink-soft"
               >
-                {state.done ? '✓ All illustrations are ready.' : rotating[copyIdx]}
+                {state.done
+                  ? '✓ All illustrations are ready.'
+                  : retryingPages > 0
+                    ? `Retrying ${retryingPages} page${retryingPages === 1 ? '' : 's'} — this usually clears in a minute…`
+                    : rotating[copyIdx]}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -374,6 +449,11 @@ export default function GeneratingPage() {
                 </AnimatePresence>
                 {!t.url && (
                   <div className="absolute inset-0 shimmer" aria-hidden />
+                )}
+                {!t.url && t.attempt && t.attempt > 1 && (
+                  <span className="absolute top-1 left-1 text-[10px] font-numeral text-ink-soft bg-white/85 backdrop-blur rounded-pill px-1.5 py-0.5">
+                    retry {t.attempt}/5
+                  </span>
                 )}
                 <span className="absolute bottom-1 right-1.5 text-[10px] font-numeral text-ink-muted bg-white/70 backdrop-blur rounded-pill px-1.5">
                   {t.page + 1}
@@ -436,6 +516,34 @@ function ErrorState({ message, total, onRetry }: { message: string; total: numbe
             Retry
           </Button>
           <Button variant="secondary" onClick={() => router.push('/wizard')}>
+            Start over
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RefundedState({ title }: { title: string }) {
+  const router = useRouter()
+  return (
+    <div className="min-h-dvh bg-surface flex items-center justify-center px-5">
+      <div className="max-w-md text-center">
+        <span className="inline-flex size-14 items-center justify-center rounded-pill bg-brand-tint text-brand-deep mb-5">
+          <AlertTriangle className="size-7" />
+        </span>
+        <h1 className="font-display text-3xl text-ink leading-tight">
+          We couldn&apos;t finish {title ? `“${title}”` : 'this story'}.
+        </h1>
+        <p className="mt-3 text-ink-soft">
+          One of our illustration providers kept hiccupping and we couldn&apos;t deliver every page.
+          Rather than ship you a half-finished book, we&apos;ve <span className="font-semibold text-ink">refunded the credit</span> to your account.
+        </p>
+        <p className="mt-3 text-ink-muted text-sm">
+          Tip: a different art style is often a clean workaround when one provider is having a rough day.
+        </p>
+        <div className="mt-7 flex justify-center">
+          <Button variant="primary" size="lg" onClick={() => router.push('/wizard')} iconLeft={<RefreshCcw className="size-4" />}>
             Start over
           </Button>
         </div>

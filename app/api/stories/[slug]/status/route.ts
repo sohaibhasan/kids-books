@@ -25,5 +25,16 @@ export async function GET(
   const pages = typeof data.pages === 'string' ? JSON.parse(data.pages) : data.pages
   const total = Array.isArray(pages) ? pages.length : 0
 
-  return NextResponse.json({ images_done: Boolean(data.images_done), total_pages: total })
+  const { data: refundRow } = await supabase
+    .from('credit_events')
+    .select('id')
+    .eq('story_slug', slug)
+    .eq('reason', 'refund_failed_gen')
+    .maybeSingle()
+
+  return NextResponse.json({
+    images_done: Boolean(data.images_done),
+    total_pages: total,
+    refunded: !!refundRow,
+  })
 }

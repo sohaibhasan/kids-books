@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import StoryReader from '@/components/reader/StoryReader'
 
@@ -24,11 +24,15 @@ export default async function ReadPage({ params }: { params: Promise<{ slug: str
 
   const { data: story, error } = await supabase
     .from('stories')
-    .select('title, pages, form')
+    .select('title, pages, form, images_done')
     .eq('slug', slug)
     .single()
 
   if (error || !story) notFound()
+
+  // Never serve a partial story — bounce back to the generating page where
+  // the retry pipeline will either finish it or refund + inform the user.
+  if (!story.images_done) redirect(`/generating/${slug}`)
 
   const rawPages = typeof story.pages === 'string' ? JSON.parse(story.pages) : story.pages
   const pages = (rawPages as StoryPage[]).map(p => {
