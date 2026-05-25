@@ -125,6 +125,10 @@ function WizardInner() {
     if (!paid && !reclaimed) return
     resumeFiredRef.current = true
 
+    // Scrub the query param immediately so browser-back to /wizard doesn't
+    // re-trigger the resume effect (which would re-submit + consume a credit).
+    router.replace('/wizard')
+
     const stashed = sessionStorage.getItem(RESUME_KEY)
     if (paid && stashed) {
       try {

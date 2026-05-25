@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { generateStoryStream, getExpectedTotal } from '@/lib/ai/generate-story'
 import { supabase } from '@/lib/supabase'
 import { getOrSetDeviceId, getFallbackHash } from '@/lib/identity'
-import { getEntitlement, consumeOne, isGloballyThrottled, PACKS } from '@/lib/credits'
+import { getEntitlement, consumeOne, refundFailedGen, isGloballyThrottled, PACKS } from '@/lib/credits'
 import { maybeAlertProviderQuota } from '@/lib/alerts'
 import { WizardFormData } from '@/types'
 
@@ -96,7 +96,23 @@ export async function POST(req: NextRequest) {
           credit_event_id: creditEventId,
           featured_candidate: Boolean(form.feature_opt_in),
         })
-        if (insertError) throw insertError
+        if (insertError) {
+          // 23505 = unique-violation. Two cases hit this:
+          //   (1) free-tier concurrent race caught by the partial unique index
+          //       on stories(device_id) WHERE credit_event_id IS NULL
+          //       (migration 0005) — paywall the user, no credit was consumed.
+          //   (2) anything else — refund any consumed credit, surface the error.
+          const code = (insertError as { code?: string }).code
+          if (code === '23505' && entitlement.kind === 'free') {
+            send({ type: 'error', message: 'You have already used your free story. Please purchase a credit pack to make more.' })
+            return
+          }
+          if (entitlement.kind === 'paid') {
+            try { await refundFailedGen(deviceId, slug) }
+            catch (refundErr) { console.error('[POST /api/stories] refund after insert fail', refundErr) }
+          }
+          throw insertError
+        }
 
         send({ type: 'text-done', slug, title: story.title })
       } catch (err) {

@@ -171,9 +171,10 @@ export default function GeneratingPage() {
         // model already produced and failed, retrying just burns another call.
         if (!receivedServerError && textAutoRetryRef.current < MAX_AUTO_RETRIES) {
           textAutoRetryRef.current += 1
+          const delay = Math.min(8000, 1000 * Math.pow(2, textAutoRetryRef.current - 1))
           setTimeout(() => {
             if (!cancelled) setTextRetryKey((k) => k + 1)
-          }, 800)
+          }, delay)
           return
         }
 
@@ -318,7 +319,10 @@ export default function GeneratingPage() {
 
         if (autoRetryRef.current < MAX_AUTO_RETRIES) {
           autoRetryRef.current += 1
-          setTimeout(() => { if (!cancelled) open() }, 800)
+          // Exponential backoff: 1s, 2s (capped). Prevents a flapping network
+          // from triggering 3 reconnects inside one second.
+          const delay = Math.min(8000, 1000 * Math.pow(2, autoRetryRef.current - 1))
+          setTimeout(() => { if (!cancelled) open() }, delay)
         } else {
           setStatus('error')
         }

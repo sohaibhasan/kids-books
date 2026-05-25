@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getOrSetDeviceId } from '@/lib/identity'
 import { PACKS } from '@/lib/credits'
+import { appUrl as resolveAppUrl } from '@/lib/app-url'
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(req: NextRequest) {
     if (!priceId) return NextResponse.json({ error: `${def.priceEnv} not configured` }, { status: 500 })
 
     const { deviceId } = await getOrSetDeviceId()
-    const appUrl = process.env.APP_URL ?? new URL(req.url).origin
+    const appUrl = resolveAppUrl(req)
 
     const session = await stripe().checkout.sessions.create({
       mode: 'payment',

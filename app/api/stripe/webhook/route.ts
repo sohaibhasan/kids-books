@@ -5,6 +5,29 @@ import { supabase } from '@/lib/supabase'
 import { grant, PACKS } from '@/lib/credits'
 import { newRandomToken } from '@/lib/identity'
 import { sendEmail } from '@/lib/email'
+import { appUrl as resolveAppUrl } from '@/lib/app-url'
+
+async function alertMalformedWebhook(event: Stripe.Event, reason: string) {
+  const to = process.env.ALERT_EMAIL
+  if (!to) {
+    console.warn('[stripe webhook] ALERT_EMAIL not set — skipping malformed-event alert')
+    return
+  }
+  try {
+    await sendEmail({
+      to,
+      subject: `[Storybook Studio] Malformed Stripe webhook — ${reason}`,
+      html: `
+        <h2>Webhook event missing required metadata</h2>
+        <p>Event <code>${event.id}</code> (${event.type}) was received with valid signature but missing required metadata: <b>${reason}</b>.</p>
+        <p>We returned 200 so Stripe stops retrying. Investigate whether checkout sessions are being created without the expected metadata fields.</p>
+        <pre style="background:#f6f6f6;padding:12px;border-radius:6px;white-space:pre-wrap;font-size:12px">${JSON.stringify(event.data.object, null, 2).slice(0, 2000)}</pre>
+      `,
+    })
+  } catch (err) {
+    console.error('[stripe webhook] alert send failed', err)
+  }
+}
 
 export const runtime = 'nodejs'
 
@@ -45,8 +68,12 @@ export async function POST(req: NextRequest) {
   const pack = packId ? PACKS[packId] : null
 
   if (!deviceId || !pack) {
-    console.error('[stripe webhook] missing metadata', { deviceId, packId })
-    return NextResponse.json({ error: 'Missing metadata' }, { status: 400 })
+    // Return 200 so Stripe stops retrying. 400 would cause indefinite retries
+    // — and if the metadata is malformed, retrying never helps. Page ops.
+    console.error('[stripe webhook] missing metadata', { deviceId, packId, eventId: event.id })
+    const reason = !deviceId && !pack ? 'device_id + pack' : !deviceId ? 'device_id' : 'pack'
+    void alertMalformedWebhook(event, reason)
+    return NextResponse.json({ received: true, ignored: 'missing metadata' })
   }
 
   try {
@@ -68,7 +95,7 @@ export async function POST(req: NextRequest) {
       })
       if (error) console.error('[stripe webhook] claim token insert', error)
 
-      const appUrl = process.env.APP_URL ?? new URL(req.url).origin
+      const appUrl = resolveAppUrl(req)
       const url = `${appUrl}/api/credits/claim?token=${encodeURIComponent(token)}`
       await sendEmail({
         to: email,
