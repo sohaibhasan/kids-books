@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ChevronLeft, ChevronRight, ImageOff, Sparkles } from 'lucide-react'
@@ -27,12 +27,12 @@ interface Props {
 
 export default function StoryReader({ title, pages }: Props) {
   const [current, setCurrent] = useState(0)
-  const directionRef = useRef(1)
+  const [direction, setDirection] = useState(1)
   const reduce = useReducedMotion()
 
   const goTo = (idx: number) => {
     const target = Math.max(0, Math.min(idx, pages.length - 1))
-    directionRef.current = target > current ? 1 : -1
+    setDirection(target > current ? 1 : -1)
     setCurrent(target)
   }
   const next = () => goTo(current + 1)
@@ -99,10 +99,10 @@ export default function StoryReader({ title, pages }: Props) {
 
         {/* Page area */}
         <div className="relative w-full max-w-2xl">
-          <AnimatePresence mode="wait" custom={directionRef.current} initial={false}>
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
             <motion.div
               key={current}
-              custom={directionRef.current}
+              custom={direction}
               variants={readerPageVariants}
               initial="enter"
               animate="center"

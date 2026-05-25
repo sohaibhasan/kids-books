@@ -76,7 +76,7 @@ export default function SampleShowcase({ samples }: Props) {
               </div>
               <div className="px-5 py-4 flex items-center justify-between text-sm text-ink-soft">
                 <span>Read the book</span>
-                <ArrowUpRight className="size-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                <ArrowUpRight className="size-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" aria-hidden />
               </div>
             </motion.a>
           ))}

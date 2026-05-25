@@ -144,7 +144,7 @@ export default function Pricing() {
               <ul className="mt-6 space-y-2.5">
                 {t.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-ink-soft">
-                    <Check className="size-4 text-brand shrink-0 mt-0.5" strokeWidth={2.5} />
+                    <Check className="size-4 text-brand shrink-0 mt-0.5" strokeWidth={2.5} aria-hidden />
                     <span>{f}</span>
                   </li>
                 ))}

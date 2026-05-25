@@ -69,13 +69,13 @@ function WizardInner() {
   const [data, setData] = useState<WizardFormData>(defaultData)
   const [submitting, setSubmitting] = useState(false)
   const [paywall, setPaywall] = useState<{ open: boolean; packs: PaywallPack[] }>({ open: false, packs: [] })
-  const directionRef = useRef(1)
+  const [direction, setDirection] = useState(1)
   const resumeFiredRef = useRef(false)
 
   const update = (fields: Partial<WizardFormData>) => setData((prev) => ({ ...prev, ...fields }))
 
   const goTo = (target: number) => {
-    directionRef.current = target > step ? 1 : -1
+    setDirection(target > step ? 1 : -1)
     const clamped = Math.min(Math.max(target, 1), TOTAL_STEPS)
     setStep(clamped)
     setFurthestStep((prev) => Math.max(prev, clamped))
@@ -194,10 +194,10 @@ function WizardInner() {
         <div className="mx-auto max-w-3xl lg:max-w-6xl px-5 sm:px-8 py-8 md:py-12">
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
             <div className="bg-surface-raised rounded-xl shadow-md p-5 sm:p-8 md:p-10">
-              <AnimatePresence mode="wait" custom={directionRef.current} initial={false}>
+              <AnimatePresence mode="wait" custom={direction} initial={false}>
                 <motion.form
                   key={step}
-                  custom={directionRef.current}
+                  custom={direction}
                   variants={stepVariants}
                   initial="enter"
                   animate="center"

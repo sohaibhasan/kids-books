@@ -129,8 +129,15 @@ export default function StepChild({ data, onChange }: Props) {
                 if (!Number.isNaN(n)) onChange({ child_age: n })
               }}
               onBlur={() => {
-                if (ageInput === '' || Number.isNaN(parseInt(ageInput, 10))) {
+                const n = parseInt(ageInput, 10)
+                if (ageInput === '' || Number.isNaN(n)) {
                   setAgeInput(String(data.child_age))
+                  return
+                }
+                const clamped = Math.max(2, Math.min(12, n))
+                if (clamped !== n) {
+                  setAgeInput(String(clamped))
+                  onChange({ child_age: clamped })
                 }
               }}
               min={2}

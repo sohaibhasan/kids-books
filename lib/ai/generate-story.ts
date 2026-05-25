@@ -204,10 +204,40 @@ CRITICAL RULES:
     throw new Error('Claude did not call return_story tool')
   }
 
-  const result = toolUse.input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
+  const input = toolUse.input
+  if (!input || typeof input !== 'object') {
+    throw new Error('Claude returned malformed story (tool input is not an object)')
+  }
+  const candidate = input as Record<string, unknown>
+  if (typeof candidate.title !== 'string' || !candidate.title.trim()) {
+    throw new Error('Claude returned malformed story (missing title)')
+  }
+  if (typeof candidate.character_sheet !== 'string' || !candidate.character_sheet.trim()) {
+    throw new Error('Claude returned malformed story (missing character_sheet)')
+  }
+  if (!Array.isArray(candidate.pages)) {
+    throw new Error('Claude returned malformed story (pages is not an array)')
+  }
+  for (const [i, p] of (candidate.pages as unknown[]).entries()) {
+    if (!p || typeof p !== 'object') {
+      throw new Error(`Claude returned malformed story (page ${i} is not an object)`)
+    }
+    const pageObj = p as Record<string, unknown>
+    if (typeof pageObj.page_number !== 'number') {
+      throw new Error(`Claude returned malformed story (page ${i} missing page_number)`)
+    }
+    if (typeof pageObj.text_content !== 'string') {
+      throw new Error(`Claude returned malformed story (page ${i} missing text_content)`)
+    }
+    if (typeof pageObj.scene_description !== 'string') {
+      throw new Error(`Claude returned malformed story (page ${i} missing scene_description)`)
+    }
+  }
 
-  if (!Array.isArray(result.pages) || result.pages.length !== expectedTotal) {
-    throw new Error(`Claude returned ${result.pages?.length ?? 0} pages, expected ${expectedTotal}.`)
+  const result = input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
+
+  if (result.pages.length !== expectedTotal) {
+    throw new Error(`Claude returned ${result.pages.length} pages, expected ${expectedTotal}.`)
   }
 
   // Final 100% tick so the bar lands on full before the text-done event fires.

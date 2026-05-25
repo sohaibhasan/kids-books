@@ -39,7 +39,7 @@ export default function BottomCTA() {
               <Button
                 size="xl"
                 variant="accent"
-                iconRight={<ArrowRight className="size-4" />}
+                iconRight={<ArrowRight className="size-4" aria-hidden />}
               >
                 Create your story
               </Button>

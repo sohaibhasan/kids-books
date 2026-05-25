@@ -43,7 +43,7 @@ export default function Hero({ hero }: Props) {
           {/* Copy column */}
           <div className="text-center md:text-left">
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 mb-5 px-3 h-7 rounded-pill bg-brand-tint text-brand-deep text-xs font-semibold uppercase tracking-wide">
-              <Sparkles className="size-3.5" />
+              <Sparkles className="size-3.5" aria-hidden />
               New · personalized in 2 minutes
             </motion.div>
 
@@ -67,7 +67,7 @@ export default function Hero({ hero }: Props) {
               className="mt-8 flex flex-col sm:flex-row items-center md:items-start gap-3 md:justify-start justify-center"
             >
               <Link href="/wizard">
-                <Button size="xl" iconRight={<ArrowRight className="size-4" />}>
+                <Button size="xl" iconRight={<ArrowRight className="size-4" aria-hidden />}>
                   Create your story
                 </Button>
               </Link>
@@ -83,13 +83,13 @@ export default function Hero({ hero }: Props) {
               className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-muted justify-center md:justify-start"
             >
               <li className="inline-flex items-center gap-1.5">
-                <Sparkles className="size-3.5" /> Free to try
+                <Sparkles className="size-3.5" aria-hidden /> Free to try
               </li>
               <li className="inline-flex items-center gap-1.5">
-                <Clock className="size-3.5" /> ~2 minutes
+                <Clock className="size-3.5" aria-hidden /> ~2 minutes
               </li>
               <li className="inline-flex items-center gap-1.5">
-                <Printer className="size-3.5" /> Print-ready
+                <Printer className="size-3.5" aria-hidden /> Print-ready
               </li>
             </motion.ul>
           </div>
@@ -108,8 +108,9 @@ export default function Hero({ hero }: Props) {
 }
 
 function HeroMockup({ hero }: { hero: HeroStory }) {
-  const firstChar = hero.excerpt.charAt(0) || 'A'
-  const rest = hero.excerpt.slice(1)
+  const text = hero.excerpt ?? ''
+  const firstChar = text.charAt(0) || 'A'
+  const rest = text.slice(1)
   return (
     <div className="relative">
       {/* Stacked book shadow */}

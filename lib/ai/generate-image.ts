@@ -102,10 +102,13 @@ export async function generateImage(
 const OPENAI_URL = 'https://api.openai.com/v1/images/generations'
 
 async function generateWithOpenAI(prompt: string): Promise<Buffer> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('OPENAI_API_KEY not set')
+
   const res = await fetch(OPENAI_URL, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -206,6 +209,9 @@ const RECRAFT_SUBSTYLE_MAP: Partial<Record<ArtStyle, string>> = {
 }
 
 async function generateWithRecraft(prompt: string, style: ArtStyle): Promise<Buffer> {
+  const apiKey = process.env.RECRAFT_API_KEY
+  if (!apiKey) throw new Error('RECRAFT_API_KEY not set')
+
   const condensedPrompt = condenseForRecraft(prompt)
   const body: Record<string, unknown> = {
     prompt: condensedPrompt,
@@ -221,7 +227,7 @@ async function generateWithRecraft(prompt: string, style: ArtStyle): Promise<Buf
   const res = await fetch(RECRAFT_URL, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${process.env.RECRAFT_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),

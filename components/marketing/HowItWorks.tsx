@@ -7,19 +7,19 @@ import { fadeUp, staggerChildren } from '@/lib/motion'
 
 const STEPS = [
   {
-    icon: <Wand2 className="size-5" />,
+    icon: <Wand2 className="size-5" aria-hidden />,
     title: 'Tell us about your child',
     body: 'Name, age, looks, and the lesson you want them to remember.',
     tone: 'bg-brand-tint text-brand-deep',
   },
   {
-    icon: <Palette className="size-5" />,
+    icon: <Palette className="size-5" aria-hidden />,
     title: 'Pick the world & style',
     body: 'Eight art aesthetics, eight writing voices, six tones — mix freely.',
     tone: 'bg-accent-tint text-ink',
   },
   {
-    icon: <BookOpen className="size-5" />,
+    icon: <BookOpen className="size-5" aria-hidden />,
     title: 'Get an illustrated book',
     body: 'A page-by-page story in about two minutes — share, read, or print.',
     tone: 'bg-[var(--story-sage)]/40 text-ink',

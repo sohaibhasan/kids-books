@@ -34,7 +34,6 @@ export async function GET(
     const pages: { page_number: number; scene_description: string }[] =
       typeof rawPages === 'string' ? JSON.parse(rawPages) : rawPages
     const form = typeof rawForm === 'string' ? JSON.parse(rawForm) : rawForm
-    console.log(`[images ${slug}] pages type=${typeof rawPages} count=${pages.length}`)
 
     const artStyle: ArtStyle = form?.art_style || 'comic-book'
 
