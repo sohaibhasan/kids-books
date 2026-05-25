@@ -7,30 +7,17 @@ import { fadeUp, staggerChildren } from '@/lib/motion'
 
 const SUPABASE_PUBLIC = 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/object/public/story-images'
 
-const SAMPLES = [
-  {
-    slug: 'jake-1uq15',
-    title: 'Jake and the Bees of Clover Hill Farm',
-    tag: 'Nature · Trying New Things',
-  },
-  {
-    slug: 'john-tq6l4',
-    title: 'John and the Zoomberry Star',
-    tag: 'Sci-fi · Resilience',
-  },
-  {
-    slug: 'aamilah-u9n5m',
-    title: 'Aamilah and the Mountain of Giving',
-    tag: 'Adventure · Generosity',
-  },
-  {
-    slug: 'minha-y0mfr',
-    title: 'Minha and the Mountain of Stars',
-    tag: 'Fairy-tale · Wonder',
-  },
-]
+export interface SampleStory {
+  slug: string
+  title: string
+  tag: string
+}
 
-export default function SampleShowcase() {
+interface Props {
+  samples: SampleStory[]
+}
+
+export default function SampleShowcase({ samples }: Props) {
   return (
     <section id="examples" className="py-20 md:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
@@ -61,7 +48,7 @@ export default function SampleShowcase() {
           variants={staggerChildren(0.08)}
           className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5"
         >
-          {SAMPLES.map((s) => (
+          {samples.map((s) => (
             <motion.a
               key={s.slug}
               href={`/read/${s.slug}`}

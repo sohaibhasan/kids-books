@@ -82,4 +82,6 @@ export interface WizardFormData {
   // Extras
   dedication?: string
   language: string
+  // Showcase opt-in
+  feature_opt_in?: boolean
 }

@@ -8,6 +8,7 @@ import StepHeader from '../StepHeader'
 interface Props {
   data: WizardFormData
   onJump: (step: number) => void
+  onChange: (fields: Partial<WizardFormData>) => void
 }
 
 interface Row {
@@ -35,7 +36,7 @@ function MetaRow({ row, onJump }: { row: Row; onJump: (step: number) => void }) 
   )
 }
 
-export default function StepReview({ data, onJump }: Props) {
+export default function StepReview({ data, onJump, onChange }: Props) {
   const name = data.child_name || 'Your child'
   const companions = data.supporting_characters
     ? data.supporting_characters.split(',').filter(Boolean).join(', ')
@@ -107,6 +108,24 @@ export default function StepReview({ data, onJump }: Props) {
           <MetaRow key={`${r.label}-${r.step}`} row={r} onJump={onJump} />
         ))}
       </div>
+
+      {/* Showcase opt-in */}
+      <label className="mt-5 flex items-start gap-3 p-4 rounded-xl border border-border bg-surface-raised cursor-pointer hover:bg-surface-sunken/40 transition-colors">
+        <input
+          type="checkbox"
+          checked={!!data.feature_opt_in}
+          onChange={(e) => onChange({ feature_opt_in: e.target.checked })}
+          className="mt-0.5 size-4 rounded border-border accent-[color:var(--brand)] cursor-pointer"
+        />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[15px] text-ink font-medium leading-snug">
+            Feature this story as an example on our home page (optional)
+          </span>
+          <span className="mt-1 block text-sm text-ink-muted leading-snug">
+            We&apos;ll occasionally rotate community-created stories into the landing-page showcase. Your story stays public either way.
+          </span>
+        </span>
+      </label>
 
       <p className="mt-5 text-sm text-ink-muted text-center">
         Generation takes about two minutes. Keep this tab open while we cook.

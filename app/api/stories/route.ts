@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
           device_id: deviceId,
           fallback_hash: fallbackHash,
           credit_event_id: creditEventId,
+          featured_candidate: Boolean(form.feature_opt_in),
         })
         if (insertError) throw insertError
 

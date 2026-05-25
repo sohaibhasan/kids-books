@@ -7,14 +7,18 @@ import { ArrowRight, Sparkles, Clock, Printer } from 'lucide-react'
 import { fadeUp, staggerChildren } from '@/lib/motion'
 import Button from '@/components/ui/Button'
 
-const HERO_STORY = {
-  slug: 'minha-y0mfr',
-  title: 'Minha and the Mountain of Stars',
-  coverUrl: 'https://yfmlegmlkqkzpxotajna.supabase.co/storage/v1/object/public/story-images/minha-y0mfr/page-00.png',
-  excerpt: 'Minha tilted her chin up to the night and let the mountain count out its stars, one by one…',
+export interface HeroStory {
+  slug: string
+  title: string
+  coverUrl: string
+  excerpt: string
 }
 
-export default function Hero() {
+interface Props {
+  hero: HeroStory
+}
+
+export default function Hero({ hero }: Props) {
   return (
     <section className="relative overflow-hidden">
       {/* Soft gradient blob */}
@@ -95,7 +99,7 @@ export default function Hero() {
             variants={fadeUp}
             className="relative mx-auto md:ml-auto w-full max-w-md"
           >
-            <HeroMockup />
+            <HeroMockup hero={hero} />
           </motion.div>
         </motion.div>
       </div>
@@ -103,7 +107,9 @@ export default function Hero() {
   )
 }
 
-function HeroMockup() {
+function HeroMockup({ hero }: { hero: HeroStory }) {
+  const firstChar = hero.excerpt.charAt(0) || 'A'
+  const rest = hero.excerpt.slice(1)
   return (
     <div className="relative">
       {/* Stacked book shadow */}
@@ -116,13 +122,13 @@ function HeroMockup() {
         className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-xl bg-brand-tint"
       />
       <Link
-        href={`/read/${HERO_STORY.slug}`}
+        href={`/read/${hero.slug}`}
         className="relative block rounded-xl bg-surface-raised shadow-xl overflow-hidden border border-border group"
       >
         <div className="relative aspect-[4/5] w-full bg-surface-sunken">
           <Image
-            src={HERO_STORY.coverUrl}
-            alt={`Cover illustration for ${HERO_STORY.title}`}
+            src={hero.coverUrl}
+            alt={`Cover illustration for ${hero.title}`}
             fill
             priority
             sizes="(min-width: 768px) 480px, 90vw"
@@ -133,13 +139,13 @@ function HeroMockup() {
               A Storybook Studio Original
             </p>
             <h3 className="font-display text-3xl text-white leading-tight mt-1 drop-shadow">
-              {HERO_STORY.title}
+              {hero.title}
             </h3>
           </div>
         </div>
         <div className="p-5 border-t border-border">
           <p className="text-sm text-ink-soft leading-relaxed">
-            <span className="drop-cap">A</span>{HERO_STORY.excerpt.slice(1)}
+            <span className="drop-cap">{firstChar}</span>{rest}
           </p>
         </div>
       </Link>

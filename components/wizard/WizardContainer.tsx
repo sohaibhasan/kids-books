@@ -45,6 +45,7 @@ const defaultData: WizardFormData = {
   tone: 'adventurous',
   depth_modifiers: [],
   language: 'English',
+  feature_opt_in: false,
 }
 
 function canAdvance(step: number, data: WizardFormData): boolean {
@@ -154,7 +155,7 @@ function WizardInner() {
       case 4: return <StepSetting data={data} onChange={update} />
       case 5: return <StepStyle data={data} onChange={update} />
       case 6: return <StepVoice data={data} onChange={update} />
-      case 7: return <StepReview data={data} onJump={goTo} />
+      case 7: return <StepReview data={data} onJump={goTo} onChange={update} />
       default: return null
     }
   })()

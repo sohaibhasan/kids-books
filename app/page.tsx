@@ -5,14 +5,18 @@ import SampleShowcase from '@/components/marketing/SampleShowcase'
 import Pricing from '@/components/marketing/Pricing'
 import BottomCTA from '@/components/marketing/BottomCTA'
 import Footer from '@/components/marketing/Footer'
+import { getShowcaseStories } from '@/lib/featured-stories'
 
-export default function Home() {
+export const dynamic = 'force-dynamic'
+
+export default async function Home() {
+  const { hero, samples } = await getShowcaseStories()
   return (
     <main className="bg-surface min-h-screen">
       <Header />
-      <Hero />
+      <Hero hero={hero} />
       <HowItWorks />
-      <SampleShowcase />
+      <SampleShowcase samples={samples} />
       <Pricing />
       <BottomCTA />
       <Footer />
