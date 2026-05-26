@@ -32,7 +32,7 @@ export default function BottomCTA() {
             Ready when you are.
           </h2>
           <p className="relative mt-4 text-white/85 text-lg max-w-md mx-auto">
-            Two minutes, one story, a thousand bedtimes.
+            Ten minutes, one story, a thousand bedtimes.
           </p>
           <div className="relative mt-8 inline-block">
             <Link href="/wizard">
@@ -45,7 +45,7 @@ export default function BottomCTA() {
               </Button>
             </Link>
           </div>
-          <p className="relative mt-5 text-white/70 text-sm">Free to try · ~2 minutes · Print-ready</p>
+          <p className="relative mt-5 text-white/70 text-sm">Free to try · ~5–10 minutes · Print-ready</p>
         </motion.div>
       </div>
     </section>

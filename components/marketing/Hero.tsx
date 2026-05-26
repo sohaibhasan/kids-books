@@ -44,7 +44,7 @@ export default function Hero({ hero }: Props) {
           <div className="text-center md:text-left">
             <motion.div variants={fadeUp} className="inline-flex items-center gap-2 mb-5 px-3 h-7 rounded-pill bg-brand-tint text-brand-deep text-xs font-semibold uppercase tracking-wide">
               <Sparkles className="size-3.5" aria-hidden />
-              New · personalized in 2 minutes
+              New · personalized in 5–10 minutes
             </motion.div>
 
             <motion.h1
@@ -86,7 +86,7 @@ export default function Hero({ hero }: Props) {
                 <Sparkles className="size-3.5" aria-hidden /> Free to try
               </li>
               <li className="inline-flex items-center gap-1.5">
-                <Clock className="size-3.5" aria-hidden /> ~2 minutes
+                <Clock className="size-3.5" aria-hidden /> ~5–10 minutes
               </li>
               <li className="inline-flex items-center gap-1.5">
                 <Printer className="size-3.5" aria-hidden /> Print-ready

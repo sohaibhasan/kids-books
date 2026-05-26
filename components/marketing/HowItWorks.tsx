@@ -21,7 +21,7 @@ const STEPS = [
   {
     icon: <BookOpen className="size-5" aria-hidden />,
     title: 'Get an illustrated book',
-    body: 'A page-by-page story in about two minutes — share, read, or print.',
+    body: 'A page-by-page story in about five to ten minutes — share, read, or print.',
     tone: 'bg-[var(--story-sage)]/40 text-ink',
   },
 ]

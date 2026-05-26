@@ -128,7 +128,7 @@ export default function StepReview({ data, onJump, onChange }: Props) {
       </label>
 
       <p className="mt-5 text-sm text-ink-muted text-center">
-        Generation takes about two minutes. Keep this tab open while we cook.
+        Generation takes about 5–10 minutes. Keep this tab open while we cook.
       </p>
     </div>
   )
