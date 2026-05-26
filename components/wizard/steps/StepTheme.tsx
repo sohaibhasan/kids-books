@@ -3,26 +3,12 @@
 import SelectCard from '@/components/ui/SelectCard'
 import { WizardFormData } from '@/types'
 import StepHeader from '../StepHeader'
+import { LESSONS } from './StepTheme.data'
 
 interface Props {
   data: WizardFormData
   onChange: (fields: Partial<WizardFormData>) => void
 }
-
-export const LESSONS: { value: string; icon: string; label: string }[] = [
-  { value: 'Kindness',           icon: '❤️',  label: 'Kindness' },
-  { value: 'Bravery',            icon: '🦁',  label: 'Bravery' },
-  { value: 'Honesty',            icon: '💎',  label: 'Honesty' },
-  { value: 'Sharing',            icon: '🤝',  label: 'Sharing' },
-  { value: 'Managing Emotions',  icon: '🌈',  label: 'Emotions' },
-  { value: 'Trying New Things',  icon: '🌱',  label: 'Try New Things' },
-  { value: 'Inclusivity',        icon: '🌍',  label: 'Inclusivity' },
-  { value: 'Environmental Care', icon: '🌳',  label: 'Nature Care' },
-  { value: 'Resilience',         icon: '💪',  label: 'Resilience' },
-  { value: 'Friendship',         icon: '👫',  label: 'Friendship' },
-  { value: 'Gratitude',          icon: '🙏',  label: 'Gratitude' },
-  { value: 'Generosity',         icon: '🎁',  label: 'Generosity' },
-]
 
 export default function StepTheme({ data, onChange }: Props) {
   const name = data.child_name || 'your child'

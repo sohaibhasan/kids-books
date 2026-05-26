@@ -1,24 +1,14 @@
 'use client'
 
-import SelectCard, { SelectCardTone } from '@/components/ui/SelectCard'
-import { Genre, WizardFormData } from '@/types'
+import SelectCard from '@/components/ui/SelectCard'
+import { WizardFormData } from '@/types'
 import StepHeader from '../StepHeader'
+import { GENRES } from './StepGenre.data'
 
 interface Props {
   data: WizardFormData
   onChange: (fields: Partial<WizardFormData>) => void
 }
-
-export const GENRES: { value: Genre; icon: string; label: string; description: string; tone: SelectCardTone }[] = [
-  { value: 'fantasy',    icon: '🐉', label: 'Fantasy',          description: 'Magic, creatures & quests',  tone: 'lavender' },
-  { value: 'adventure',  icon: '🗺️', label: 'Adventure',        description: 'Exploration & treasure',     tone: 'apricot' },
-  { value: 'sci-fi',     icon: '🚀', label: 'Sci-Fi',           description: 'Space, robots & future',     tone: 'sky' },
-  { value: 'nature',     icon: '🌿', label: 'Nature & Animals', description: 'Wildlife & ecosystems',      tone: 'sage' },
-  { value: 'fairy-tale', icon: '🏰', label: 'Fairy Tale',       description: 'Classic moral tales',        tone: 'rose' },
-  { value: 'everyday',   icon: '🏠', label: 'Everyday Life',    description: 'Relatable moments',          tone: 'accent' },
-  { value: 'mystery',    icon: '🔍', label: 'Mystery',          description: 'Clues & problem-solving',    tone: 'sky' },
-  { value: 'humor',      icon: '😂', label: 'Humor',            description: 'Silly & absurd fun',         tone: 'apricot' },
-]
 
 export default function StepGenre({ data, onChange }: Props) {
   const name = data.child_name || 'your child'
