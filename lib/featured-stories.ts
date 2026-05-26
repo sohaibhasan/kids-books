@@ -41,7 +41,6 @@ const FALLBACK: Showcase = {
   samples: [
     { slug: 'jake-1uq15',    title: 'Jake and the Bees of Clover Hill Farm', tag: 'Nature · Trying New Things' },
     { slug: 'john-tq6l4',    title: 'John and the Zoomberry Star',           tag: 'Sci-fi · Resilience' },
-    { slug: 'aamilah-u9n5m', title: 'Aamilah and the Mountain of Giving',    tag: 'Adventure · Generosity' },
     { slug: 'minha-y0mfr',   title: 'Minha and the Mountain of Stars',       tag: 'Fairy-tale · Wonder' },
   ],
 }
