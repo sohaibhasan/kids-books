@@ -54,11 +54,15 @@ function canAdvance(step: number, data: WizardFormData): boolean {
   if (step === 3) return !!data.lesson
   if (step === 4) return !!data.setting
   if (step === 6) return !!data.writing_style && !!data.tone
+  if (step === 7) {
+    // Email is optional, but if present it must be valid.
+    if (!data.email) return true
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())
+  }
   return true
 }
 
 const RESUME_KEY = 'kb_wizard_resume'
-const FORM_STASH_PREFIX = 'kb_wizard_form_'
 
 function WizardInner() {
   const router = useRouter()
@@ -86,7 +90,7 @@ function WizardInner() {
   const submit = async (form: WizardFormData) => {
     setSubmitting(true)
     try {
-      const res = await fetch('/api/stories/precheck', {
+      const res = await fetch('/api/stories/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -106,8 +110,7 @@ function WizardInner() {
       }
       const { slug } = await res.json()
       sessionStorage.removeItem(RESUME_KEY)
-      sessionStorage.setItem(`${FORM_STASH_PREFIX}${slug}`, JSON.stringify(form))
-      router.push(`/generating/${slug}?phase=text`)
+      router.push(`/generating/${slug}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       toast({ tone: 'error', title: 'Could not create story', description: message })

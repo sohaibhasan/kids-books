@@ -1,8 +1,9 @@
 'use client'
 
-import { Pencil, Sparkles } from 'lucide-react'
+import { Mail, Pencil, Sparkles } from 'lucide-react'
 import { WizardFormData } from '@/types'
 import { DEPTH_MODIFIERS, TONE_META, WRITING_STYLE_VOICES } from '@/lib/ai/writing-styles'
+import Input from '@/components/ui/Input'
 import StepHeader from '../StepHeader'
 
 interface Props {
@@ -109,8 +110,24 @@ export default function StepReview({ data, onJump, onChange }: Props) {
         ))}
       </div>
 
+      {/* Email me when it's done */}
+      <div className="mt-5 p-4 rounded-xl border border-border bg-surface-raised">
+        <Input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          label="Email me when it's done (optional)"
+          hint="We'll send one email with a link to the finished book. No newsletter, no list — just this story."
+          placeholder="you@example.com"
+          iconLeft={<Mail className="size-4" />}
+          value={data.email ?? ''}
+          onChange={(value) => onChange({ email: value })}
+          error={data.email && !isValidEmail(data.email) ? 'That doesn’t look like an email address.' : undefined}
+        />
+      </div>
+
       {/* Showcase opt-in */}
-      <label className="mt-5 flex items-start gap-3 p-4 rounded-xl border border-border bg-surface-raised cursor-pointer hover:bg-surface-sunken/40 transition-colors">
+      <label className="mt-3 flex items-start gap-3 p-4 rounded-xl border border-border bg-surface-raised cursor-pointer hover:bg-surface-sunken/40 transition-colors">
         <input
           type="checkbox"
           checked={!!data.feature_opt_in}
@@ -128,8 +145,14 @@ export default function StepReview({ data, onJump, onChange }: Props) {
       </label>
 
       <p className="mt-5 text-sm text-ink-muted text-center">
-        Generation takes about 5–10 minutes. Keep this tab open while we cook.
+        {data.email && isValidEmail(data.email)
+          ? `Generation takes about 5–10 minutes. We'll email you when it's ready — feel free to close this tab.`
+          : `Generation takes about 5–10 minutes. You can leave the tab open, or add an email above so we can ping you.`}
       </p>
     </div>
   )
+}
+
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
 }

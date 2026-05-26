@@ -84,4 +84,7 @@ export interface WizardFormData {
   language: string
   // Showcase opt-in
   feature_opt_in?: boolean
+  // Optional notification email — when set, we email a link once the story
+  // is ready so the user can close the tab and walk away.
+  email?: string
 }
