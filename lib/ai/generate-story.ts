@@ -40,6 +40,56 @@ export async function generateStoryStream(
   form: WizardFormData,
   onProgress?: (completed: number, total: number) => void,
 ): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
+  try {
+    return await generateStoryStreamOnce(form, onProgress)
+  } catch (err) {
+    if (!isRetryableStoryError(err)) throw err
+    console.warn('[generateStoryStream] first attempt failed, retrying once:', err instanceof Error ? err.message : err)
+    return await generateStoryStreamOnce(form, onProgress)
+  }
+}
+
+type ResponseLike = {
+  stop_reason?: string | null
+  stop_sequence?: string | null
+  usage?: unknown
+  content: Array<{ type: string; input?: unknown }>
+}
+
+function describeResponse(response: ResponseLike): string {
+  const toolUse = response.content.find(b => b.type === 'tool_use')
+  const input = toolUse?.type === 'tool_use' ? toolUse.input : undefined
+  const inputShape = input && typeof input === 'object'
+    ? Object.fromEntries(
+        Object.entries(input as Record<string, unknown>).map(([k, v]) => [
+          k,
+          Array.isArray(v) ? `array(len=${v.length})` : typeof v,
+        ]),
+      )
+    : typeof input
+  return JSON.stringify({
+    stop_reason: response.stop_reason,
+    stop_sequence: response.stop_sequence,
+    usage: response.usage,
+    content_block_types: response.content.map(b => b.type),
+    tool_input_shape: inputShape,
+  })
+}
+
+function isRetryableStoryError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  const m = err.message
+  return (
+    m.includes('malformed story') ||
+    m.includes('did not call return_story') ||
+    m.includes('truncated the story')
+  )
+}
+
+async function generateStoryStreamOnce(
+  form: WizardFormData,
+  onProgress?: (completed: number, total: number) => void,
+): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
   const tier      = getAgeTier(form.child_age)
   const pageCount = getPageCount(form.length)
   const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['comic-book']
@@ -123,7 +173,7 @@ CRITICAL RULES:
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
-    max_tokens: 16000,
+    max_tokens: 20000,
     tools: [
       {
         name: 'return_story',
@@ -195,49 +245,55 @@ CRITICAL RULES:
 
   const response = await stream.finalMessage()
 
-  if (response.stop_reason === 'max_tokens') {
-    throw new Error('Claude truncated the story (stop_reason=max_tokens). Try a shorter length or retry.')
+  const stopReason = response.stop_reason
+  const fail = (msg: string): Error => {
+    console.warn('[generateStoryStreamOnce] malformed response', describeResponse(response))
+    return new Error(`${msg}; stop_reason=${stopReason}`)
+  }
+
+  if (stopReason === 'max_tokens') {
+    throw fail('Claude truncated the story (try a shorter length or retry)')
   }
 
   const toolUse = response.content.find(b => b.type === 'tool_use')
   if (!toolUse || toolUse.type !== 'tool_use') {
-    throw new Error('Claude did not call return_story tool')
+    throw fail('Claude did not call return_story tool')
   }
 
   const input = toolUse.input
   if (!input || typeof input !== 'object') {
-    throw new Error('Claude returned malformed story (tool input is not an object)')
+    throw fail('Claude returned malformed story (tool input is not an object)')
   }
   const candidate = input as Record<string, unknown>
   if (typeof candidate.title !== 'string' || !candidate.title.trim()) {
-    throw new Error('Claude returned malformed story (missing title)')
+    throw fail('Claude returned malformed story (missing title)')
   }
   if (typeof candidate.character_sheet !== 'string' || !candidate.character_sheet.trim()) {
-    throw new Error('Claude returned malformed story (missing character_sheet)')
+    throw fail('Claude returned malformed story (missing character_sheet)')
   }
   if (!Array.isArray(candidate.pages)) {
-    throw new Error('Claude returned malformed story (pages is not an array)')
+    throw fail('Claude returned malformed story (pages is not an array)')
   }
   for (const [i, p] of (candidate.pages as unknown[]).entries()) {
     if (!p || typeof p !== 'object') {
-      throw new Error(`Claude returned malformed story (page ${i} is not an object)`)
+      throw fail(`Claude returned malformed story (page ${i} is not an object)`)
     }
     const pageObj = p as Record<string, unknown>
     if (typeof pageObj.page_number !== 'number') {
-      throw new Error(`Claude returned malformed story (page ${i} missing page_number)`)
+      throw fail(`Claude returned malformed story (page ${i} missing page_number)`)
     }
     if (typeof pageObj.text_content !== 'string') {
-      throw new Error(`Claude returned malformed story (page ${i} missing text_content)`)
+      throw fail(`Claude returned malformed story (page ${i} missing text_content)`)
     }
     if (typeof pageObj.scene_description !== 'string') {
-      throw new Error(`Claude returned malformed story (page ${i} missing scene_description)`)
+      throw fail(`Claude returned malformed story (page ${i} missing scene_description)`)
     }
   }
 
   const result = input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
 
   if (result.pages.length !== expectedTotal) {
-    throw new Error(`Claude returned ${result.pages.length} pages, expected ${expectedTotal}.`)
+    throw fail(`Claude returned malformed story (${result.pages.length} pages, expected ${expectedTotal})`)
   }
 
   // Final 100% tick so the bar lands on full before the text-done event fires.
