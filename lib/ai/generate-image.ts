@@ -21,7 +21,7 @@ import { STYLE_PREFIXES } from './index'
 //   (Google Nano Banana 2 is the free-tier fallback for any style)
 // ---------------------------------------------------------------------------
 
-type ImageProvider = 'openai' | 'recraft' | 'fal' | 'google'
+export type ImageProvider = 'openai' | 'recraft' | 'fal' | 'google'
 
 const STYLE_PROVIDER_MAP: Record<ArtStyle, ImageProvider> = {
   'comic-book': 'openai',
@@ -34,65 +34,28 @@ const STYLE_PROVIDER_MAP: Record<ArtStyle, ImageProvider> = {
   'storybook-realism': 'fal',
 }
 
-function selectProvider(style: ArtStyle): ImageProvider {
+export function selectProviderForStyle(style: ArtStyle): ImageProvider {
   return STYLE_PROVIDER_MAP[style] ?? 'openai'
 }
 
-// Detect provider content-filter rejections. These won't clear on a plain
-// retry — the prompt itself needs to change. We rewrite it via Claude (same
-// provider, different surface form) instead of switching providers, so the
-// story's art aesthetic stays consistent across pages.
-function isContentFilterRejection(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err)
-  return /prompt_is_improper|content[_ ]filter|content[_ ]policy|safety[_ ]system|moderation_blocked/i.test(msg)
-}
-
-const MAX_SANITIZE_ATTEMPTS = 2
-
-async function callProvider(
+/**
+ * Single-shot image generation. The retry / rewrite / refund policy lives in
+ * lib/jobs/run-story-job.ts so this stays a pure provider primitive and the
+ * policy is testable in isolation. Provider is fixed per story by the
+ * caller — never swap mid-story (aesthetic consistency).
+ */
+export async function generateImage(
   prompt: string,
   style: ArtStyle,
-  provider: 'openai' | 'recraft' | 'fal' | 'google',
+  providerOverride?: ImageProvider,
 ): Promise<Buffer> {
+  const provider = providerOverride ?? selectProviderForStyle(style)
   switch (provider) {
     case 'openai':  return generateWithOpenAI(prompt)
     case 'recraft': return generateWithRecraft(prompt, style)
     case 'fal':     return generateWithFal(prompt)
     case 'google':  return generateWithGoogle(prompt)
   }
-}
-
-export async function generateImage(
-  prompt: string,
-  style: ArtStyle,
-): Promise<Buffer> {
-  const provider = selectProvider(style)
-
-  let currentPrompt = prompt
-  let lastError: unknown = null
-
-  // Initial call + up to MAX_SANITIZE_ATTEMPTS sanitize-and-retry cycles.
-  for (let cycle = 0; cycle <= MAX_SANITIZE_ATTEMPTS; cycle++) {
-    try {
-      return await callProvider(currentPrompt, style, provider)
-    } catch (err) {
-      lastError = err
-      if (!isContentFilterRejection(err) || cycle === MAX_SANITIZE_ATTEMPTS) {
-        throw err
-      }
-      // Filter-rejected — ask Claude to rewrite, then loop and retry with
-      // the new prompt on the same provider.
-      console.warn(`[generate-image] ${provider} content-filter rejection (cycle ${cycle + 1}); sanitizing prompt`)
-      const { sanitizePromptForProvider } = await import('./sanitize-prompt')
-      try {
-        currentPrompt = await sanitizePromptForProvider(currentPrompt, provider, cycle + 1)
-      } catch (sanErr) {
-        console.error('[generate-image] sanitize call failed', sanErr)
-        throw err // rethrow the original provider rejection
-      }
-    }
-  }
-  throw lastError ?? new Error('generateImage: exhausted sanitize budget')
 }
 
 // ---------------------------------------------------------------------------
