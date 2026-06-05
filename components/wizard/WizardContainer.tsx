@@ -17,10 +17,11 @@ import StepTheme from './steps/StepTheme'
 import StepSetting from './steps/StepSetting'
 import StepStyle from './steps/StepStyle'
 import StepVoice from './steps/StepVoice'
+import StepIdeas from './steps/StepIdeas'
 import StepReview from './steps/StepReview'
 import StoryPreview from './StoryPreview'
 
-const STEP_LABELS = ['About', 'Genre', 'Lesson', 'World', 'Style', 'Voice', 'Review']
+const STEP_LABELS = ['About', 'Genre', 'Lesson', 'World', 'Style', 'Voice', 'Ideas', 'Review']
 const TOTAL_STEPS = STEP_LABELS.length
 
 const defaultData: WizardFormData = {
@@ -54,8 +55,9 @@ function canAdvance(step: number, data: WizardFormData): boolean {
   if (step === 3) return !!data.lesson
   if (step === 4) return !!data.setting
   if (step === 6) return !!data.writing_style && !!data.tone
-  if (step === 7) {
-    // Email is optional, but if present it must be valid.
+  // step 7 = Ideas — fully optional, no gate (falls through to `return true`).
+  if (step === 8) {
+    // Review — email is optional, but if present it must be valid.
     if (!data.email) return true
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())
   }
@@ -137,8 +139,8 @@ function WizardInner() {
       try {
         const form = JSON.parse(stashed) as WizardFormData
         setData(form)
-        setStep(7)
-        setFurthestStep(7)
+        setStep(8)
+        setFurthestStep(8)
         toast({ tone: 'success', title: 'Payment received', description: 'Picking up where you left off.' })
         void submit(form)
         return
@@ -162,7 +164,8 @@ function WizardInner() {
       case 4: return <StepSetting data={data} onChange={update} />
       case 5: return <StepStyle data={data} onChange={update} />
       case 6: return <StepVoice data={data} onChange={update} />
-      case 7: return <StepReview data={data} onJump={goTo} onChange={update} />
+      case 7: return <StepIdeas data={data} onChange={update} />
+      case 8: return <StepReview data={data} onJump={goTo} onChange={update} />
       default: return null
     }
   })()

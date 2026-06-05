@@ -103,8 +103,15 @@ export default function StoryPreview({ data, step }: Props) {
   const showSetting = step >= 4 && !!setting
   const showStyle = step >= 5 && !!artStyle
   const showVoice = step >= 6 && !!voice
+  const ideaBits = [
+    data.custom_plot_points,
+    data.custom_subjects,
+    data.custom_world_details,
+    data.custom_special_object,
+  ].filter(Boolean) as string[]
+  const showIdeas = step >= 7 && (ideaBits.length > 0 || !!data.surprise_me)
 
-  const isEmpty = !showHero && !showGenre && !showLesson && !showSetting && !showStyle && !showVoice
+  const isEmpty = !showHero && !showGenre && !showLesson && !showSetting && !showStyle && !showVoice && !showIdeas
 
   return (
     <aside
@@ -245,6 +252,17 @@ export default function StoryPreview({ data, step }: Props) {
                       </PillTag>
                     )
                   })}
+                </div>
+              </SectionShell>
+            )}
+
+            {showIdeas && (
+              <SectionShell key="ideas" title="Your ideas">
+                <div className="flex flex-wrap gap-1.5">
+                  {ideaBits.map((bit) => (
+                    <PillTag key={bit}>{bit}</PillTag>
+                  ))}
+                  {data.surprise_me && <PillTag>✨ Surprise me</PillTag>}
                 </div>
               </SectionShell>
             )}

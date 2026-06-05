@@ -87,4 +87,12 @@ export interface WizardFormData {
   // Optional notification email — when set, we email a link once the story
   // is ready so the user can close the tab and walk away.
   email?: string
+  // Step 7 - Your Ideas (optional user-injected story elements). All free-text
+  // fields are treated as creative suggestions and woven in subordinate to
+  // safety + the narrative arc — see lib/ai/generate-story.ts.
+  custom_plot_points?: string     // a must-happen moment / plot beat
+  custom_subjects?: string        // interests / subjects to feature
+  custom_world_details?: string   // setting / world flourishes
+  custom_special_object?: string  // a meaningful object to include
+  surprise_me?: boolean           // let the author invent one extra delight
 }

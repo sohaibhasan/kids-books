@@ -31,6 +31,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'invalid email' }, { status: 400 })
   }
 
+  // Harden optional user-injected story elements: collapse whitespace (strips
+  // newlines/tabs a user could use to forge fake prompt-block delimiters) and
+  // clamp to per-field caps that mirror the wizard's client-side maxLength.
+  form.custom_plot_points    = clampText(form.custom_plot_points, 600)
+  form.custom_subjects       = clampText(form.custom_subjects, 300)
+  form.custom_world_details  = clampText(form.custom_world_details, 300)
+  form.custom_special_object = clampText(form.custom_special_object, 120)
+  form.surprise_me = Boolean(form.surprise_me)
+
   const { deviceId } = await getOrSetDeviceId()
   const fallbackHash = await getFallbackHash()
   const entitlement = await getEntitlement(deviceId, fallbackHash)
@@ -110,4 +119,10 @@ export async function POST(req: NextRequest) {
 
 function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
+}
+
+function clampText(v: unknown, max: number): string | undefined {
+  if (typeof v !== 'string') return undefined
+  const t = v.replace(/\s+/g, ' ').trim().slice(0, max)
+  return t.length ? t : undefined
 }

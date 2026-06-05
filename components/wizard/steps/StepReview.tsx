@@ -73,6 +73,18 @@ export default function StepReview({ data, onJump, onChange }: Props) {
     })
   }
 
+  const ideaBits = [
+    data.custom_plot_points,
+    data.custom_subjects,
+    data.custom_world_details,
+    data.custom_special_object && `object: ${data.custom_special_object}`,
+    data.surprise_me && 'surprise me',
+  ].filter(Boolean) as string[]
+
+  if (ideaBits.length > 0) {
+    rows.push({ step: 7, label: 'Your ideas', value: ideaBits.join(' · ') })
+  }
+
   return (
     <div>
       <StepHeader
