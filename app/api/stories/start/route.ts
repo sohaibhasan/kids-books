@@ -77,7 +77,10 @@ export async function POST(req: NextRequest) {
 
   const { error: insertError } = await supabase.from('stories').insert({
     slug,
-    title: null,
+    // Placeholder until the background job writes the real Claude-generated
+    // title. Keeps the insert valid even before migration 0007 (which drops the
+    // NOT NULL on title) has been applied to the database.
+    title: 'Creating story…',
     form,
     pages: [],
     images_done: false,

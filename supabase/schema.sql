@@ -2,7 +2,7 @@
 create table if not exists stories (
   id          uuid primary key default gen_random_uuid(),
   slug        text unique not null,
-  title       text not null,
+  title       text,
   form        jsonb not null,
   pages       jsonb not null,
   images_done boolean not null default false,
