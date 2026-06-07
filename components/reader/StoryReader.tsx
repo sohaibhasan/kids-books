@@ -3,12 +3,11 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ChevronLeft, ChevronRight, ImageOff, Sparkles } from 'lucide-react'
-import IconButton from '@/components/ui/IconButton'
+import { ImageOff, Sparkles } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { readerPageVariants } from '@/lib/motion'
 import ReaderChrome from './ReaderChrome'
-import Scrubber from './Scrubber'
+import ReaderNav from './ReaderNav'
 import SharePopover from './SharePopover'
 
 interface Page {
@@ -74,29 +73,7 @@ export default function StoryReader({ title, pages }: Props) {
 
       <ReaderChrome pageLabel={pageLabel} share={<SharePopover title={title} />} />
 
-      <main className="relative min-h-dvh flex items-center justify-center px-4 sm:px-8 py-20">
-        {/* Prev / Next chevrons (desktop) */}
-        <div className="hidden md:flex absolute left-4 inset-y-0 items-center z-20">
-          <IconButton
-            variant="glass"
-            size="lg"
-            label="Previous page"
-            icon={<ChevronLeft />}
-            onClick={prev}
-            disabled={current === 0}
-          />
-        </div>
-        <div className="hidden md:flex absolute right-4 inset-y-0 items-center z-20">
-          <IconButton
-            variant="glass"
-            size="lg"
-            label="Next page"
-            icon={<ChevronRight />}
-            onClick={next}
-            disabled={current === pages.length - 1}
-          />
-        </div>
-
+      <main className="relative min-h-dvh flex items-center justify-center px-4 sm:px-8 pt-20 pb-28">
         {/* Page area */}
         <div className="relative w-full max-w-2xl">
           <AnimatePresence mode="wait" custom={direction} initial={false}>
@@ -126,19 +103,18 @@ export default function StoryReader({ title, pages }: Props) {
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Mobile prev/next floats */}
-        <div className="md:hidden fixed inset-x-4 bottom-20 flex justify-between z-30 pointer-events-none">
-          <div className="pointer-events-auto">
-            <IconButton variant="glass" size="lg" label="Previous page" icon={<ChevronLeft />} onClick={prev} disabled={current === 0} />
-          </div>
-          <div className="pointer-events-auto">
-            <IconButton variant="glass" size="lg" label="Next page" icon={<ChevronRight />} onClick={next} disabled={current === pages.length - 1} />
-          </div>
-        </div>
       </main>
 
-      <Scrubber pages={pages} current={current} onSelect={goTo} />
+      <ReaderNav
+        pages={pages}
+        current={current}
+        pageLabel={pageLabel}
+        onSelect={goTo}
+        onPrev={prev}
+        onNext={next}
+        atStart={current === 0}
+        atEnd={current === pages.length - 1}
+      />
     </div>
   )
 }

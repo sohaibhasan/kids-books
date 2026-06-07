@@ -55,7 +55,7 @@ components/
   wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepReview (each exports its option arrays — SKIN_TONES, GENRES, LESSONS, etc. — reused by StoryPreview)
   reader/StoryReader.tsx          ← Page-by-page reader client component
   reader/ReaderChrome.tsx         ← Auto-hiding floating top bar
-  reader/Scrubber.tsx             ← Page scrubber with hover thumbnails
+  reader/ReaderNav.tsx            ← Unified bottom nav bar (prev/next + dot scrubber w/ hover thumbnails; page label on mobile)
   reader/SharePopover.tsx         ← Radix Popover for copy/native-share/print
   ui/                             ← Button, Input, SelectCard, Card, Badge, Chip, Progress, Stepper, IconButton, Toast (Radix), Select (Radix)
 lib/
