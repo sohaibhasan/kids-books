@@ -1,6 +1,6 @@
 'use client'
 
-import { Mail, Pencil, Sparkles } from 'lucide-react'
+import { AlertTriangle, Check, Mail, Pencil, Sparkles } from 'lucide-react'
 import { WizardFormData } from '@/types'
 import { DEPTH_MODIFIERS, TONE_META, WRITING_STYLE_VOICES } from '@/lib/ai/writing-styles'
 import Input from '@/components/ui/Input'
@@ -136,6 +136,7 @@ export default function StepReview({ data, onJump, onChange }: Props) {
           onChange={(value) => onChange({ email: value })}
           error={data.email && !isValidEmail(data.email) ? 'That doesn’t look like an email address.' : undefined}
         />
+        <EmailTradeoffStrip email={data.email} />
       </div>
 
       {/* Showcase opt-in */}
@@ -157,12 +158,49 @@ export default function StepReview({ data, onJump, onChange }: Props) {
       </label>
 
       <p className="mt-5 text-sm text-ink-muted text-center">
-        {data.email && isValidEmail(data.email)
-          ? `Generation takes about 5–10 minutes. We'll email you when it's ready — feel free to close this tab.`
-          : `Generation takes about 5–10 minutes. You can leave the tab open, or add an email above so we can ping you.`}
+        Generation takes about 5–10 minutes.
       </p>
     </div>
   )
+}
+
+function EmailTradeoffStrip({ email }: { email: string | undefined }) {
+  const hasValid = !!email && isValidEmail(email)
+  return (
+    <div
+      className={
+        'mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ' +
+        (hasValid
+          ? 'bg-[color:var(--story-sage)]/30 text-ink'
+          : 'bg-[color:var(--story-apricot)]/30 text-ink')
+      }
+      role="status"
+      aria-live="polite"
+    >
+      {hasValid ? (
+        <>
+          <Check className="size-4 shrink-0" aria-hidden />
+          <span className="leading-snug">
+            We&apos;ll email <strong className="font-semibold">{maskEmail(email!)}</strong> when it&apos;s ready — feel free to close this tab.
+          </span>
+        </>
+      ) : (
+        <>
+          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          <span className="leading-snug">
+            No email? You&apos;ll need to keep this tab open for the next 5–10 minutes.
+          </span>
+        </>
+      )}
+    </div>
+  )
+}
+
+function maskEmail(email: string): string {
+  const [user, domain] = email.trim().split('@')
+  if (!user || !domain) return email
+  if (user.length <= 1) return `${user}***@${domain}`
+  return `${user[0]}***@${domain}`
 }
 
 function isValidEmail(s: string): boolean {
