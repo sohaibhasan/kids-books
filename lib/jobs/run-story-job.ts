@@ -3,10 +3,10 @@ import { generateStoryStream } from '@/lib/ai/generate-story'
 import { generateImage, selectProviderForStyle, ImageProvider } from '@/lib/ai/generate-image'
 import { classifyImageError } from '@/lib/ai/classify-image-error'
 import { rewritePromptForError } from '@/lib/ai/sanitize-prompt'
-import { refundFailedGen } from '@/lib/credits'
 import { maybeAlertProviderQuota } from '@/lib/alerts'
-import { sendStorySuccessEmail, sendStoryFailureEmail } from './emails'
+import { sendStorySuccessEmail } from './emails'
 import { claimStory, heartbeat, getStoryRow, type PageStatus, type StoryRow } from './claim'
+import { failStory } from './fail-story'
 import { ArtStyle, WizardFormData } from '@/types'
 
 const BUCKET = 'story-images'
@@ -21,6 +21,7 @@ type JobResult =
   | { finalStatus: 'failed'; reason: string }
   | { finalStatus: 'in_progress_handed_off'; reason?: undefined }
   | { finalStatus: 'not_claimed'; reason?: undefined }
+
 
 export async function runStoryJob(slug: string): Promise<JobResult> {
   const claimed = await claimStory(slug)
@@ -302,45 +303,6 @@ async function sendSuccessIfNeeded(slug: string): Promise<void> {
   } catch (err) {
     console.error(`[run-story-job ${slug}] success email failed`, err)
   }
-}
-
-async function failStory(slug: string, row: StoryRow, reason: string): Promise<JobResult> {
-  let refunded = false
-  if (row.credit_event_id && row.device_id) {
-    try {
-      const r = await refundFailedGen(row.device_id, slug)
-      refunded = r.refunded
-    } catch (refundErr) {
-      console.error(`[run-story-job ${slug}] refund failed`, refundErr)
-    }
-  }
-  await supabase
-    .from('stories')
-    .update({
-      status: 'failed',
-      failure_reason: reason.slice(0, 600),
-      last_progress_at: new Date().toISOString(),
-    })
-    .eq('slug', slug)
-
-  if (row.email && !row.notify_email_sent_at) {
-    try {
-      const form = parseForm(row.form)
-      await sendStoryFailureEmail({
-        to: row.email,
-        childName: (form.child_name as string) || 'your child',
-        refunded,
-        failureReason: reason,
-      })
-      await supabase
-        .from('stories')
-        .update({ notify_email_sent_at: new Date().toISOString() })
-        .eq('slug', slug)
-    } catch (mailErr) {
-      console.error(`[run-story-job ${slug}] failure email failed`, mailErr)
-    }
-  }
-  return { finalStatus: 'failed', reason }
 }
 
 function parseForm(raw: unknown): WizardFormData {

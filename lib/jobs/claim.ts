@@ -128,3 +128,27 @@ export async function findStaleJobs(limit = 5): Promise<string[]> {
   }
   return (data ?? []).map(r => r.slug as string)
 }
+
+/**
+ * Find in-flight jobs whose retry budget is exhausted. These rows would
+ * otherwise be ignored by `findStaleJobs` forever — the cron sweeper calls
+ * this to terminally fail them (refund + email) instead of leaving them
+ * parked. The 5-minute long-stale gate keeps us from racing an actively
+ * claimed worker that just happens to be on its last attempt.
+ */
+export async function findExhaustedJobs(limit = 10): Promise<StoryRow[]> {
+  const longStale = new Date(Date.now() - 300_000).toISOString()
+  const { data, error } = await supabase
+    .from('stories')
+    .select(SELECT_FIELDS)
+    .in('status', ['pending', 'generating_text', 'generating_images'])
+    .lte('attempts_remaining', 0)
+    .lt('last_progress_at', longStale)
+    .order('last_progress_at', { ascending: true })
+    .limit(limit)
+  if (error) {
+    console.error('[findExhaustedJobs]', error)
+    return []
+  }
+  return (data ?? []) as unknown as StoryRow[]
+}
