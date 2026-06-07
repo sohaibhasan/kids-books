@@ -27,8 +27,10 @@ export async function POST(req: NextRequest) {
   if (!form?.child_name?.trim()) {
     return NextResponse.json({ error: 'child_name is required' }, { status: 400 })
   }
-  if (form.email && !isValidEmail(form.email)) {
-    return NextResponse.json({ error: 'invalid email' }, { status: 400 })
+  // Email is required: the book is produced in the background and its link is
+  // delivered by email, so we can't finish a story without somewhere to send it.
+  if (!form.email?.trim() || !isValidEmail(form.email)) {
+    return NextResponse.json({ error: 'A delivery email is required.' }, { status: 400 })
   }
 
   // Harden optional user-injected story elements: collapse whitespace (strips
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
     pages: [],
     images_done: false,
     status: 'pending',
-    email: form.email?.trim() || null,
+    email: form.email.trim(),
     device_id: deviceId,
     fallback_hash: fallbackHash,
     credit_event_id: creditEventId,

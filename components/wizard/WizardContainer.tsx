@@ -47,6 +47,7 @@ const defaultData: WizardFormData = {
   depth_modifiers: [],
   language: 'English',
   feature_opt_in: false,
+  email: '',
 }
 
 function canAdvance(step: number, data: WizardFormData): boolean {
@@ -57,9 +58,9 @@ function canAdvance(step: number, data: WizardFormData): boolean {
   if (step === 6) return !!data.writing_style && !!data.tone
   // step 7 = Ideas — fully optional, no gate (falls through to `return true`).
   if (step === 8) {
-    // Review — email is optional, but if present it must be valid.
-    if (!data.email) return true
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())
+    // Review — a valid delivery email is required: the book is produced in the
+    // background and the link is emailed, so we can't ship without it.
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((data.email ?? '').trim())
   }
   return true
 }
@@ -240,6 +241,7 @@ function WizardInner() {
               size="lg"
               onClick={handleCreate}
               loading={submitting}
+              disabled={blockNext}
               iconRight={!submitting ? <Sparkles className="size-4" /> : undefined}
             >
               {submitting ? 'Creating…' : 'Create my story'}

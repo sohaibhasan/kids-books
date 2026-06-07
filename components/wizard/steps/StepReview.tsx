@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Check, Mail, Pencil, Sparkles } from 'lucide-react'
+import { Check, Mail, Pencil, Sparkles } from 'lucide-react'
 import { WizardFormData } from '@/types'
 import { DEPTH_MODIFIERS, TONE_META, WRITING_STYLE_VOICES } from '@/lib/ai/writing-styles'
 import Input from '@/components/ui/Input'
@@ -122,21 +122,22 @@ export default function StepReview({ data, onJump, onChange }: Props) {
         ))}
       </div>
 
-      {/* Email me when it's done */}
-      <div className="mt-5 p-4 rounded-xl border border-border bg-surface-raised">
+      {/* Where to send the finished book — required */}
+      <div className="mt-5 p-4 rounded-xl border border-brand-tint bg-brand-tint/25">
         <Input
           type="email"
           inputMode="email"
           autoComplete="email"
-          label="Email me when it's done (optional)"
-          hint="We'll send one email with a link to the finished book. No newsletter, no list — just this story."
+          required
+          label="Where should we send the finished book?"
+          hint="We illustrate every page in the background — about 5–10 minutes — then email you the link. One email about this story. No newsletter, no list."
           placeholder="you@example.com"
           iconLeft={<Mail className="size-4" />}
           value={data.email ?? ''}
           onChange={(value) => onChange({ email: value })}
           error={data.email && !isValidEmail(data.email) ? 'That doesn’t look like an email address.' : undefined}
         />
-        <EmailTradeoffStrip email={data.email} />
+        <EmailWhyStrip email={data.email} />
       </div>
 
       {/* Showcase opt-in */}
@@ -158,18 +159,18 @@ export default function StepReview({ data, onJump, onChange }: Props) {
       </label>
 
       <p className="mt-5 text-sm text-ink-muted text-center">
-        Generation takes about 5–10 minutes.
+        Your book takes about 5–10 minutes to illustrate. We&apos;ll email it the moment it&apos;s ready — watching it come together is optional.
       </p>
     </div>
   )
 }
 
-function EmailTradeoffStrip({ email }: { email: string | undefined }) {
+function EmailWhyStrip({ email }: { email: string | undefined }) {
   const hasValid = !!email && isValidEmail(email)
   return (
     <div
       className={
-        'mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ' +
+        'mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-sm transition-colors ' +
         (hasValid
           ? 'bg-[color:var(--story-sage)]/30 text-ink'
           : 'bg-[color:var(--story-apricot)]/30 text-ink')
@@ -179,16 +180,16 @@ function EmailTradeoffStrip({ email }: { email: string | undefined }) {
     >
       {hasValid ? (
         <>
-          <Check className="size-4 shrink-0" aria-hidden />
+          <Check className="size-4 shrink-0 mt-0.5" aria-hidden />
           <span className="leading-snug">
-            We&apos;ll email <strong className="font-semibold">{maskEmail(email!)}</strong> when it&apos;s ready — feel free to close this tab.
+            Your book will land in <strong className="font-semibold">{maskEmail(email!)}</strong> the moment it&apos;s ready — close the tab and go do something fun. You can still watch it come together if you like.
           </span>
         </>
       ) : (
         <>
-          <AlertTriangle className="size-4 shrink-0" aria-hidden />
+          <Mail className="size-4 shrink-0 mt-0.5" aria-hidden />
           <span className="leading-snug">
-            No email? You&apos;ll need to keep this tab open for the next 5–10 minutes.
+            We need this to deliver your book. Stories are built in the background and sent by email, so you don&apos;t have to wait with this tab open — handy, since a live render can stall the moment you navigate away.
           </span>
         </>
       )}
