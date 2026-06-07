@@ -3,7 +3,7 @@ import { generateStoryStream } from '@/lib/ai/generate-story'
 import { generateImage, selectProviderForStyle, ImageProvider } from '@/lib/ai/generate-image'
 import { classifyImageError } from '@/lib/ai/classify-image-error'
 import { rewritePromptForError } from '@/lib/ai/sanitize-prompt'
-import { maybeAlertProviderQuota } from '@/lib/alerts'
+import { maybeAlertProviderQuota, maybeAlertEmailFailure } from '@/lib/alerts'
 import { sendStorySuccessEmail } from './emails'
 import { claimStory, heartbeat, getStoryRow, type PageStatus, type StoryRow } from './claim'
 import { failStory } from './fail-story'
@@ -289,13 +289,20 @@ async function sendSuccessIfNeeded(slug: string): Promise<void> {
       .from(BUCKET)
       .getPublicUrl(`${slug}/page-00.png`)
     const form = parseForm(fresh.form)
-    await sendStorySuccessEmail({
+    const result = await sendStorySuccessEmail({
       to: fresh.email,
       title: fresh.title ?? 'Your storybook',
       slug,
       childName: (form.child_name as string) || 'your child',
       coverUrl: cover.publicUrl,
     })
+    if (!result.ok) {
+      // Leave notify_email_sent_at null so the row stays recoverable (status
+      // route keeps reporting email_will_be_sent, admin endpoint can resend).
+      console.error(`[run-story-job ${slug}] success email failed`, result)
+      await maybeAlertEmailFailure(result, `success email for ${slug}`)
+      return
+    }
     await supabase
       .from('stories')
       .update({ notify_email_sent_at: new Date().toISOString() })

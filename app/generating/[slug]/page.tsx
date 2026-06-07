@@ -228,7 +228,9 @@ export default function GeneratingPage() {
             <Mail className="size-4 text-brand-deep shrink-0 mt-0.5" />
             <p className="text-sm text-brand-deep leading-snug">
               <span className="font-semibold">Safe to close this tab.</span>{' '}
-              We&apos;ll email <span className="font-mono">{snapshot.email_address_masked}</span> when the book is ready.
+              We&apos;ll email <span className="font-mono">{snapshot.email_address_masked}</span> when the book is ready.{' '}
+              Can&apos;t find it? Check your spam or junk folder and add{' '}
+              <span className="font-mono">hello@support.storybookstudio.org</span> to your contacts.
             </p>
           </div>
         )}

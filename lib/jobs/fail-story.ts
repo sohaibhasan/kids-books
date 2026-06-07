@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { refundFailedGen } from '@/lib/credits'
 import { sendStoryFailureEmail } from './emails'
+import { maybeAlertEmailFailure } from '@/lib/alerts'
 import type { StoryRow } from './claim'
 import { WizardFormData } from '@/types'
 
@@ -38,16 +39,22 @@ export async function failStory(
   if (row.email && !row.notify_email_sent_at) {
     try {
       const form = parseForm(row.form)
-      await sendStoryFailureEmail({
+      const result = await sendStoryFailureEmail({
         to: row.email,
         childName: (form.child_name as string) || 'your child',
         refunded,
         failureReason: reason,
       })
-      await supabase
-        .from('stories')
-        .update({ notify_email_sent_at: new Date().toISOString() })
-        .eq('slug', slug)
+      if (!result.ok) {
+        // Leave notify_email_sent_at null so the row stays recoverable.
+        console.error(`[failStory ${slug}] failure email failed`, result)
+        await maybeAlertEmailFailure(result, `failure email for ${slug}`)
+      } else {
+        await supabase
+          .from('stories')
+          .update({ notify_email_sent_at: new Date().toISOString() })
+          .eq('slug', slug)
+      }
     } catch (mailErr) {
       console.error(`[failStory ${slug}] failure email failed`, mailErr)
     }

@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { sendEmail } from './email'
+import { sendEmail, type SendEmailResult } from './email'
 
 const ALERT_DEBOUNCE_MS = 60 * 60 * 1000 // 1 hour per provider
 
@@ -93,5 +93,46 @@ export async function maybeAlertProviderQuota(err: unknown, contextHint?: string
     })
   } catch (alertErr) {
     console.error('[alerts] alert handler failed', alertErr)
+  }
+}
+
+/**
+ * Notify the operator that a transactional email failed to send. Call this
+ * with the result of a `sendEmail` attempt whenever `ok` is false.
+ *
+ * Early-returns on `missing_config` — if RESEND_API_KEY/EMAIL_FROM are the
+ * problem, this alert can't send either, so there's no point trying (and it
+ * avoids a recursive failure loop). Never throws.
+ */
+export async function maybeAlertEmailFailure(
+  result: SendEmailResult,
+  contextHint?: string,
+): Promise<void> {
+  try {
+    if (result.ok) return
+    if (result.reason === 'missing_config') {
+      console.warn('[alerts] email send skipped (missing_config) — not alerting', contextHint ?? '')
+      return
+    }
+
+    const to = process.env.ALERT_EMAIL
+    if (!to) {
+      console.warn('[alerts] ALERT_EMAIL not set — skipping email-failure alert')
+      return
+    }
+
+    await sendEmail({
+      to,
+      subject: `[Storybook Studio] transactional email failed (HTTP ${result.status ?? '??'})`,
+      html: `
+        <h2>Transactional email failed</h2>
+        <p>Resend returned <b>HTTP ${result.status ?? 'unknown'}</b>.</p>
+        ${contextHint ? `<p>Context: ${contextHint}</p>` : ''}
+        <pre style="background:#f6f6f6;padding:12px;border-radius:6px;white-space:pre-wrap;font-size:12px">${(result.body ?? '').slice(0, 600)}</pre>
+        <p style="color:#888;font-size:12px">The recipient row was left without a notify_email_sent_at timestamp, so it remains recoverable via the admin resend endpoint.</p>
+      `,
+    })
+  } catch (alertErr) {
+    console.error('[alerts] email-failure alert handler failed', alertErr)
   }
 }

@@ -1,8 +1,19 @@
-import { sendEmail } from '@/lib/email'
+import { sendEmail, type SendEmailResult } from '@/lib/email'
 import { appUrl } from '@/lib/app-url'
 
 const FONT_STACK =
   '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
+
+// Support address on the verified sending subdomain. Used for Reply-To and the
+// List-Unsubscribe header — both improve inbox placement (esp. with Apple Mail).
+const SUPPORT_ADDRESS = 'hello@support.storybookstudio.org'
+
+// Standard headers attached to every transactional send. Even one-shot
+// transactional mail places better when List-Unsubscribe is present.
+const DELIVERABILITY_HEADERS: Record<string, string> = {
+  'List-Unsubscribe': `<mailto:${SUPPORT_ADDRESS}?subject=unsubscribe>`,
+  'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+}
 
 const wrap = (inner: string) => `
   <div style="font-family: ${FONT_STACK}; line-height: 1.55; color: #2a2118; max-width: 560px; margin: 0 auto; padding: 24px;">
@@ -23,7 +34,7 @@ export interface SuccessOptions {
   coverUrl?: string
 }
 
-export async function sendStorySuccessEmail(opts: SuccessOptions): Promise<void> {
+export async function sendStorySuccessEmail(opts: SuccessOptions): Promise<SendEmailResult> {
   const url = `${appUrl()}/read/${opts.slug}`
   const cover = opts.coverUrl
     ? `<img src="${opts.coverUrl}" alt="" width="520" style="display:block; max-width:100%; height:auto; border-radius:14px; margin: 0 0 24px;" />`
@@ -46,10 +57,21 @@ export async function sendStorySuccessEmail(opts: SuccessOptions): Promise<void>
       Or copy this link: <a href="${url}" style="color:#998c7c;">${url}</a>
     </p>
   `)
-  await sendEmail({
+  const text = [
+    `${opts.childName}'s story is ready to read.`,
+    '',
+    `We just finished "${opts.title}". Open the book here:`,
+    url,
+    '',
+    '— Storybook Studio',
+  ].join('\n')
+  return sendEmail({
     to: opts.to,
     subject: `“${opts.title}” is ready to read`,
     html,
+    text,
+    replyTo: SUPPORT_ADDRESS,
+    headers: DELIVERABILITY_HEADERS,
   })
 }
 
@@ -60,7 +82,7 @@ export interface FailureOptions {
   failureReason?: string | null
 }
 
-export async function sendStoryFailureEmail(opts: FailureOptions): Promise<void> {
+export async function sendStoryFailureEmail(opts: FailureOptions): Promise<SendEmailResult> {
   const url = `${appUrl()}/wizard`
   const refundLine = opts.refunded
     ? `<p style="margin: 0 0 16px;">We've <strong>refunded the credit</strong> to your account — please give it another try with a different art style or a slightly different setup.</p>`
@@ -84,10 +106,28 @@ export async function sendStoryFailureEmail(opts: FailureOptions): Promise<void>
       </a>
     </p>
   `)
-  await sendEmail({
+  const refundText = opts.refunded
+    ? "We've refunded the credit to your account — please give it another try with a different art style or a slightly different setup."
+    : 'Please give it another try with a different art style or a slightly different setup.'
+  const text = [
+    `Sorry — we couldn't finish ${opts.childName}'s story.`,
+    '',
+    "One of our illustration providers kept hiccuping on a particular page and we couldn't deliver every one. Rather than ship a half-finished book, we held off.",
+    '',
+    refundText,
+    opts.failureReason ? `\nWhat went wrong: ${opts.failureReason}` : '',
+    '',
+    `Try another story: ${url}`,
+    '',
+    '— Storybook Studio',
+  ].join('\n')
+  return sendEmail({
     to: opts.to,
     subject: `Sorry — we couldn't finish ${opts.childName}'s story`,
     html,
+    text,
+    replyTo: SUPPORT_ADDRESS,
+    headers: DELIVERABILITY_HEADERS,
   })
 }
 
