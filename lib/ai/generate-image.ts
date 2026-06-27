@@ -44,6 +44,12 @@ export function selectProviderForStyle(style: ArtStyle): ImageProvider {
  * policy is testable in isolation. Provider is fixed per story by the
  * caller — never swap mid-story (aesthetic consistency).
  */
+function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 90_000): Promise<Response> {
+  const ctrl = new AbortController()
+  const id = setTimeout(() => ctrl.abort(), timeoutMs)
+  return fetch(url, { ...init, signal: ctrl.signal }).finally(() => clearTimeout(id))
+}
+
 export async function generateImage(
   prompt: string,
   style: ArtStyle,
@@ -68,7 +74,7 @@ async function generateWithOpenAI(prompt: string): Promise<Buffer> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY not set')
 
-  const res = await fetch(OPENAI_URL, {
+  const res = await fetchWithTimeout(OPENAI_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -99,7 +105,7 @@ async function generateWithOpenAI(prompt: string): Promise<Buffer> {
   }
 
   if (imageData.url) {
-    const imgRes = await fetch(imageData.url)
+    const imgRes = await fetchWithTimeout(imageData.url, {})
     if (!imgRes.ok) throw new Error(`Failed to download image: ${imgRes.status}`)
     const arrayBuffer = await imgRes.arrayBuffer()
     return Buffer.from(arrayBuffer)
@@ -187,7 +193,7 @@ async function generateWithRecraft(prompt: string, style: ArtStyle): Promise<Buf
   const substyle = RECRAFT_SUBSTYLE_MAP[style]
   if (substyle) body.substyle = substyle
 
-  const res = await fetch(RECRAFT_URL, {
+  const res = await fetchWithTimeout(RECRAFT_URL, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -210,7 +216,7 @@ async function generateWithRecraft(prompt: string, style: ArtStyle): Promise<Buf
   }
 
   if (imageData.url) {
-    const imgRes = await fetch(imageData.url)
+    const imgRes = await fetchWithTimeout(imageData.url, {})
     if (!imgRes.ok) throw new Error(`Failed to download Recraft image: ${imgRes.status}`)
     const arrayBuffer = await imgRes.arrayBuffer()
     return Buffer.from(arrayBuffer)
@@ -233,7 +239,7 @@ async function generateWithFal(prompt: string): Promise<Buffer> {
   if (!falKey) throw new Error('FAL_KEY not set')
 
   // Submit to queue
-  const submitRes = await fetch(FAL_FLUX_PRO_URL, {
+  const submitRes = await fetchWithTimeout(FAL_FLUX_PRO_URL, {
     method: 'POST',
     headers: {
       Authorization: `Key ${falKey}`,
@@ -259,23 +265,27 @@ async function generateWithFal(prompt: string): Promise<Buffer> {
 
   // Poll until complete (max ~120s)
   const maxAttempts = 60
+  let completed = false
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, 2000))
 
-    const statusRes = await fetch(statusUrl, {
+    const statusRes = await fetchWithTimeout(statusUrl, {
       headers: { Authorization: `Key ${falKey}` },
-    })
+    }, 10_000)
     if (!statusRes.ok) continue
 
     const status = await statusRes.json()
-    if (status.status === 'COMPLETED') break
+    if (status.status === 'COMPLETED') { completed = true; break }
     if (status.status === 'FAILED') {
       throw new Error(`fal.ai generation failed: ${JSON.stringify(status).slice(0, 200)}`)
     }
   }
+  if (!completed) {
+    throw new Error('fal.ai polling timeout: job did not complete within 120s')
+  }
 
   // Fetch result
-  const resultRes = await fetch(responseUrl, {
+  const resultRes = await fetchWithTimeout(responseUrl, {
     headers: { Authorization: `Key ${falKey}` },
   })
   if (!resultRes.ok) {
@@ -287,7 +297,7 @@ async function generateWithFal(prompt: string): Promise<Buffer> {
   const imageUrl = result.images?.[0]?.url
   if (!imageUrl) throw new Error('No image URL in fal.ai response')
 
-  const imgRes = await fetch(imageUrl)
+  const imgRes = await fetchWithTimeout(imageUrl, {})
   if (!imgRes.ok) throw new Error(`Failed to download fal.ai image: ${imgRes.status}`)
   const arrayBuffer = await imgRes.arrayBuffer()
   return Buffer.from(arrayBuffer)
@@ -306,7 +316,7 @@ async function generateWithGoogle(prompt: string): Promise<Buffer> {
   const apiKey = process.env.GOOGLE_AI_KEY
   if (!apiKey) throw new Error('GOOGLE_AI_KEY not set')
 
-  const res = await fetch(`${GOOGLE_URL}?key=${apiKey}`, {
+  const res = await fetchWithTimeout(`${GOOGLE_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
