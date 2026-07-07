@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { stepVariants } from '@/lib/motion'
 import PaywallModal, { PaywallPack } from '@/components/paywall/PaywallModal'
+import { addMyStory } from '@/lib/my-stories'
 import StepChild from './steps/StepChild'
 import StepGenre from './steps/StepGenre'
 import StepTheme from './steps/StepTheme'
@@ -112,6 +113,7 @@ function WizardInner() {
       }
       const { slug } = await res.json()
       sessionStorage.removeItem(RESUME_KEY)
+      addMyStory({ slug, title: null, child_name: form.child_name, created_at: new Date().toISOString() })
       router.push(`/generating/${slug}`)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

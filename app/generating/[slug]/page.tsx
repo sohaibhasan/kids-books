@@ -8,6 +8,7 @@ import { AlertTriangle, ArrowRight, Info, Mail, RefreshCcw, Sparkles } from 'luc
 import Button from '@/components/ui/Button'
 import Progress from '@/components/ui/Progress'
 import { thumbReveal } from '@/lib/motion'
+import { updateMyStoryTitle } from '@/lib/my-stories'
 
 interface StatusPage {
   page_number: number
@@ -122,6 +123,15 @@ export default function GeneratingPage() {
       if (timer) clearInterval(timer)
     }
   }, [slug, router])
+
+  // Patch the story title into the device library once text gen delivers it.
+  // The insert writes a 'Creating story…' placeholder before the real title
+  // exists — don't let that land in the library.
+  useEffect(() => {
+    if (snapshot?.title && snapshot.title !== 'Creating story…') {
+      updateMyStoryTitle(slug, snapshot.title)
+    }
+  }, [slug, snapshot?.title])
 
   // Rotating copy
   const phase: 'text' | 'images' =

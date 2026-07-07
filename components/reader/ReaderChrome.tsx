@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, BookMarked } from 'lucide-react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 
@@ -44,13 +44,21 @@ export default function ReaderChrome({ pageLabel, share }: Props) {
       )}
     >
       <div className="mx-auto max-w-5xl px-4 sm:px-8 pt-4 flex items-center justify-between gap-3">
-        <div className={cn('pointer-events-auto', !visible && 'pointer-events-none')}>
+        <div className={cn('flex items-center gap-2 pointer-events-auto', !visible && 'pointer-events-none')}>
           <Link
             href="/"
             className="inline-flex items-center gap-1.5 px-3 h-9 rounded-pill bg-white/12 backdrop-blur-md text-white/90 text-sm hover:bg-white/20 transition-colors"
           >
             <ArrowLeft className="size-4" />
             <span className="hidden sm:inline">Home</span>
+          </Link>
+          <Link
+            href="/stories"
+            aria-label="My stories"
+            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-pill bg-white/12 backdrop-blur-md text-white/90 text-sm hover:bg-white/20 transition-colors"
+          >
+            <BookMarked className="size-4" />
+            <span className="hidden sm:inline">My stories</span>
           </Link>
         </div>
         <p className="text-xs uppercase tracking-widest text-white/70 font-numeral pointer-events-none">

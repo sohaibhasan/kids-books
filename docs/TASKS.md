@@ -65,7 +65,7 @@ Acceptance: payload size drops; page still flips to reader within a few seconds 
 
 ## 2. Feature improvements
 
-### [ ] FEAT-1 "My stories" device library — Sonnet, P0
+### [x] FEAT-1 "My stories" device library — Sonnet, P0 — done 2026-07-07
 No way to find a story again without the URL. On successful enqueue (`WizardContainer` after `POST /api/stories/start` returns `{slug}`), append `{slug, child_name, created_at}` to localStorage key `kb_my_stories`; on the generating page's completion poll, patch in the real title. New route `app/stories/page.tsx` (client) listing entries with cover thumbnail (`page-00.png` public URL pattern from `lib/jobs/run-story-job.ts:288–290`), linking to `/read/[slug]`. Link from `components/marketing/Header.tsx` and the reader chrome. Acceptance: create story → appears in library; clearing localStorage empties it (acceptable in the no-accounts model); empty state has a CTA to the wizard.
 
 ### [ ] FEAT-2 Wizard draft autosave — Sonnet, P1
@@ -96,13 +96,13 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 
 ## 3. Bug fixes
 
-### [ ] BUG-1 Unhandled rejection from fire-and-forget heartbeats — Haiku, P0
+### [x] BUG-1 Unhandled rejection from fire-and-forget heartbeats — Haiku, P0 — done 2026-07-07
 `run-story-job.ts:65` passes `() => { void beat() }` into `generateStoryStream`, and `beat()` (`:36–40`) awaits `heartbeat(slug)` with no catch — a transient Supabase error becomes an unhandled rejection inside a `waitUntil` job. Wrap the `beat` body in try/catch (log + continue); same for the `void maybeAlertProviderQuota(...)` calls (`:168`, `:256`) if they can reject. Acceptance: grep shows no bare `void somethingAsync()` in `lib/jobs/`; build passes.
 
 ### [ ] BUG-2 ⚠️ Validate the wizard form at the API boundary — Sonnet, P0 (pair with HARD-1 in one PR)
 `app/api/stories/start/route.ts:20–41` only checks `child_name` and email; `art_style`, `length`, `tone`, `writing_style`, `child_age`, `depth_modifiers` flow unvalidated into prompts and the provider router (unknown `art_style` silently falls back at `run-story-job.ts:101`). Add `zod` (new dep); define `WizardFormSchema` in `lib/validation.ts` with enums sourced from `types/index.ts`, `child_age` int 2–12, the existing `clampText` caps folded in, `.strip()` unknown keys. Parse in the route; on failure return the existing `{error}` 400 shape. Acceptance: request with `art_style: "x"` → 400; valid wizard payload unchanged end-to-end.
 
-### [ ] BUG-3 Timeout the Claude calls — Sonnet, P0
+### [x] BUG-3 Timeout the Claude calls — Sonnet, P0 — done 2026-07-07
 `lib/ai/generate-story.ts:195` (stream) and `lib/ai/sanitize-prompt.ts` have no timeout; a hung call eats the whole 240s job budget before the sweeper can help. The Anthropic SDK accepts a per-request `timeout` — set ~120s on story gen and ~30s on rewrites; ensure the timeout error propagates so the catch at `run-story-job.ts:253` hands off to cron. Acceptance: simulated hang (temporarily set timeout to 1ms) results in `in_progress_handed_off`, not a silent 240s stall.
 
 ### [ ] BUG-4 Retry unsent success emails from the sweeper — Sonnet, P1
@@ -186,7 +186,7 @@ Repo has none. Short: what the product is, live URL, stack table (condensed from
 (c) Fold the `AGENTS.md` Vercel notes into CLAUDE.md or reference them explicitly.
 Acceptance: `/new-migration` invocable in a fresh session.
 
-### [ ] CTX-5 Secrets hygiene — owner action + Haiku, P0
+### [x] CTX-5 Secrets hygiene — owner action + Haiku, P0 — code half done 2026-07-07; owner must still revoke/rotate the GitHub + HF tokens in .env
 Local `.env` contains plaintext `GITHUB_TOKEN` (ghp_…), `HF_TOKEN`, and a Gemini key; `.gitignore` covers them but they sit unrotated on disk and the HF/GH tokens are unused by the app. **Owner:** revoke/rotate the GitHub and HF tokens. **Haiku:** remove `HF_TOKEN` from `.env.example` and the CLAUDE.md env list. Acceptance: no unused credentials in env templates or docs.
 
 ### [x] CTX-6 Land this backlog as `docs/TASKS.md` — done 2026-07-07

@@ -35,6 +35,7 @@ export default function Header() {
           <a href="#how" className="hover:text-ink transition-colors">How it works</a>
           <a href="#examples" className="hover:text-ink transition-colors">Examples</a>
           <a href="#pricing" className="hover:text-ink transition-colors">Pricing</a>
+          <Link href="/stories" className="hover:text-ink transition-colors">My stories</Link>
           <Link
             href="/wizard"
             className="inline-flex items-center h-9 px-4 rounded-pill bg-ink text-white text-sm font-medium hover:bg-ink/85 transition-colors"
