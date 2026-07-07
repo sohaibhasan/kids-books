@@ -387,7 +387,7 @@ async function sendSuccessIfNeeded(slug: string): Promise<void> {
   }
 }
 
-function extractCharacterSheet(form: WizardFormData, pages: Array<{ scene_description: string }>): string | undefined {
+export function extractCharacterSheet(form: WizardFormData, pages: Array<{ scene_description: string }>): string | undefined {
   // The character sheet is pasted verbatim into every scene_description by
   // Claude. We grab it back out of the first story page for the rewriter so
   // it can preserve the visual anchor across rewrites. Approximation is OK:
@@ -400,7 +400,7 @@ function extractCharacterSheet(form: WizardFormData, pages: Array<{ scene_descri
   return noPrefix.slice(0, 800)
 }
 
-function extractStylePrefix(pages: Array<{ scene_description: string }>): string | undefined {
+export function extractStylePrefix(pages: Array<{ scene_description: string }>): string | undefined {
   const first = pages[0]?.scene_description
   if (!first) return undefined
   const m = first.match(/^([^.]+\.)\s*/)

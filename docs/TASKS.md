@@ -155,7 +155,7 @@ Routes return `{error}`, `{paywall, packs}`, and bare 500s inconsistently. Add `
 (b) After HARD-6: move the `toneSwatch`/`toneCheck` maps from `SelectCard.tsx:27–45` into `lib/wizard-options.ts` so tone→class mapping has one source.
 Acceptance: visual parity (compare screenshots); grep finds each class blob once.
 
-### [ ] HARD-8 Test infrastructure + first suite — Sonnet (setup), then Haiku (expansion), P0
+### [x] HARD-8 Test infrastructure + first suite — Sonnet (setup), P0 — setup done 2026-07-07 (82 assertions, `npm test`); Haiku expansion tasks remain open
 No tests exist. Add `vitest` (devDep) + `"test": "vitest run"` script. First suite, pure functions only (no network/DB): `lib/credits.ts` balance math (mock the supabase client or extract the pure calc), `lib/ai/classify-image-error.ts` (feed representative provider errors), `lib/utils/slug.ts`, `clampText`/`isValidEmail` (move to `lib/utils.ts` per BUG-10), `extractCharacterSheet`/`extractStylePrefix`. Acceptance: `npm test` green locally; ≥20 assertions.
 
 ### [ ] HARD-9 Accessible modal primitive — Sonnet, P2
