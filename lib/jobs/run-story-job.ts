@@ -36,7 +36,11 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
   const beat = async () => {
     if (Date.now() - lastBeat < HEARTBEAT_EVERY_MS) return
     lastBeat = Date.now()
-    await heartbeat(slug)
+    try {
+      await heartbeat(slug)
+    } catch (err) {
+      console.warn(`[run-story-job ${slug}] heartbeat failed`, err)
+    }
   }
 
   const deadlineHit = () => Date.now() - startedAt > SOFT_DEADLINE_MS
