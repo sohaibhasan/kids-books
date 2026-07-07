@@ -45,6 +45,13 @@ export async function rewritePromptForError(opts: RewriteOptions): Promise<strin
     max_tokens: 900,
     system,
     messages: [{ role: 'user', content: userBlocks.join('\n') }],
+  }, {
+    // Prompt rewrites are cheap/fast; a 30s limit is generous and prevents a
+    // hung rewriter from blocking the image-gen retry loop. SDK default
+    // maxRetries=2 (3 total attempts); lowering to 1 keeps worst-case at 2×30s.
+    // A timeout error propagates to the caller (run-story-job.ts catch block).
+    timeout: 30_000,
+    maxRetries: 1,
   })
 
   const textBlock = msg.content.find((b) => b.type === 'text')

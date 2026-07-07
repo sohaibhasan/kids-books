@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import Anthropic, { APIConnectionTimeoutError } from '@anthropic-ai/sdk'
 import { WizardFormData } from '@/types'
 import { STYLE_PREFIXES } from './index'
 import { DEPTH_MODIFIERS, TONE_DESCRIPTIONS, WRITING_STYLE_VOICES } from './writing-styles'
@@ -77,6 +77,11 @@ function describeResponse(response: ResponseLike): string {
 }
 
 function isRetryableStoryError(err: unknown): boolean {
+  // SDK-level connection timeout: the Anthropic API hung for the full timeout
+  // duration. Retry once — a transient hang is likely recoverable. If it times
+  // out a second time the error propagates to run-story-job.ts, which hands
+  // off to the cron sweeper.
+  if (err instanceof APIConnectionTimeoutError) return true
   if (!(err instanceof Error)) return false
   const m = err.message
   return (
@@ -241,6 +246,14 @@ CRITICAL RULES:
     ],
     tool_choice: { type: 'tool', name: 'return_story' },
     messages: [{ role: 'user', content: prompt }],
+  }, {
+    // Cap wall-clock time so a hung API call doesn't eat the entire 240s job
+    // budget. SDK default maxRetries=2 (3 total attempts); lowering to 1 means
+    // at most 2 × 120s = 240s before APIConnectionTimeoutError is thrown, which
+    // the wrapper above retries once (for transient hangs) before propagating
+    // to run-story-job.ts and the cron sweeper.
+    timeout: 120_000,
+    maxRetries: 1,
   })
 
   if (onProgress) {
