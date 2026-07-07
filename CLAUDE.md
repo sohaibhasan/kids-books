@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A web app where parents, teachers, and caregivers create personalized illustrated storybooks for children. Users customize characters, settings, themes, and lessons — then get a page-by-page storybook they can share via link or print.
 
+**Task backlog:** `docs/TASKS.md` — prioritized, delegable tasks (performance, features, bugs, hardening, docs) with per-task model recommendations (Opus/Sonnet/Haiku) and acceptance criteria. Pick work from there unless directed otherwise.
+
 ## Live Links
 
 - **Production:** https://storybookstudio.org (primary; also `https://www.storybookstudio.org` and the legacy `https://kidsbooks-eight.vercel.app`)
