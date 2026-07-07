@@ -49,13 +49,13 @@ Acceptance: generated story JSON in DB is byte-shape identical; token usage per 
 ### [ ] PERF-4 Trust `page_status` instead of listing Storage per page — Haiku, P1
 `run-story-job.ts:277–281` (`imageExists`) does a `storage.list()` for every not-done page on every (re)claim. Only call it when the page's status is `in_progress` (a prior worker may have crashed between upload and status persist); for `pending` pages skip straight to generation. Acceptance: fresh story does zero `storage.list` calls; resumed story still recovers already-uploaded pages.
 
-### [ ] PERF-5 Slim the status endpoint + adaptive polling — Sonnet, P1
+### [x] PERF-5 Slim the status endpoint + adaptive polling — Sonnet, P1
 `app/api/stories/[slug]/status/route.ts` + `app/generating/[slug]/page.tsx` (`POLL_MS = 3000`).
 (a) Return only fields the generating page renders; skip the `credit_events` query except when status is `failed`/`refunded`.
 (b) Client: poll at 3s during `generating_images`, back off to 5–8s during `pending`/`generating_text` and after 2 minutes elapsed.
 Acceptance: payload size drops; page still flips to reader within a few seconds of completion.
 
-### [ ] PERF-6 Reader image loading: `next/image` + adjacent-page preload — Sonnet, P1
+### [x] PERF-6 Reader image loading: `next/image` + adjacent-page preload — Sonnet, P1
 `components/reader/StoryReader.tsx:138` and `components/reader/ReaderNav.tsx:76` use raw `<img>` with full-res Supabase URLs. Convert to `next/image` with `sizes` (correct pattern already in `components/marketing/Hero.tsx:130–136`; `next.config.ts` already allowlists the Supabase host). Preload current±1 page images (hidden `<Image priority>` or `link rel=preload`). ReaderNav thumbnails get small `sizes` so Next serves resized variants. Acceptance: page-turn shows no image pop-in on a warm story; image weight on `/read/[slug]` drops.
 
 ### [ ] PERF-7 Memoize StoryPreview — Haiku, P2
@@ -108,7 +108,7 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [ ] BUG-4 Retry unsent success emails from the sweeper — Sonnet, P1
 `run-story-job.ts:283–313`: if the success email fails, `notify_email_sent_at` stays null by design, but nothing ever retries — the admin endpoint is manual. In `/api/cron/resume-stories` (runs every 2 min via `.github/workflows/cron-resume-stories.yml`), also query `status='complete' AND email IS NOT NULL AND notify_email_sent_at IS NULL AND last_progress_at < now()-'10 min'` and call the existing send path (export `sendSuccessIfNeeded`). Cap retries (small migration adding `notify_attempts` if needed). Acceptance: force a send failure (bad RESEND key in dev) → next sweep retries; success stamps the timestamp.
 
-### [ ] BUG-5 `?paid=1` resume fails silently — Sonnet, P1
+### [x] BUG-5 `?paid=1` resume fails silently — Sonnet, P1
 `WizardContainer.tsx:125–157`: arriving at `/wizard?paid=1` with a missing/corrupt sessionStorage stash shows a success toast but silently does nothing (empty catch at `:147`). When the stash is absent/unparseable: toast "Payment received — your credit is ready. Your previous inputs couldn't be restored, please review and submit again." and land on the review step if partial data exists, else step 1. Acceptance: clear sessionStorage, hit `/wizard?paid=1` → explicit message, no dead-end.
 
 ### [ ] BUG-6 ⚠️ Guard test-mode webhooks in production — Sonnet, P1
@@ -117,7 +117,7 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [ ] BUG-7 Remove the dead Google image provider (or revive it) — Sonnet, P1
 `GOOGLE_AI_KEY` has been returning 429 `limit: 0` for all Gemini image models — the "free fallback" is non-functional, and any story routed to it burns all 8 attempts and fails. First verify with one live call (script in scratchpad, not the repo). Then either (a) owner enables billing, or (b) remove `google` from `selectProviderForStyle` fallbacks in `lib/ai/generate-image.ts`, delete the provider branch, and update CLAUDE.md's provider table. Default to (b) if quota is still 0. Acceptance: no code path can select a provider whose env key is absent/dead; docs match.
 
-### [ ] BUG-8 Error boundaries for reader + generating pages — Haiku, P1
+### [x] BUG-8 Error boundaries for reader + generating pages — Haiku, P1
 Add `app/read/[slug]/error.tsx` and `app/generating/[slug]/error.tsx` (client components, on-brand copy, "Try again" via `reset()`, link home). Follow existing design tokens (`bg-cream`, Fraunces heading, `Button` primitive). Acceptance: throwing inside `StoryReader` renders the boundary instead of a blank screen.
 
 ### [ ] BUG-9 Companion name without companion type — Haiku, P2
@@ -174,10 +174,10 @@ Acceptance: build passes; CLAUDE.md links updated if (b) executes.
 ### [x] CTX-1 Rewrite CLAUDE.md architecture sections — Sonnet, P0 — done 2026-07-07
 CLAUDE.md documents deleted routes (`POST /api/stories`, SSE `GET /api/stories/[slug]/images` with event shapes) and omits the real production architecture. Rewrite "Implemented API Endpoints" and the app-structure tree, and add a "Background job pipeline" section covering: `POST /api/stories/start` (credit-first + refund-on-failure), `lib/jobs/run-story-job.ts` (claim/heartbeat/soft-deadline/attempt budgets/`page_status`), the `/api/stories/[slug]/status` polling contract, `/api/stories/[slug]/abandon`, `/api/admin/story-email/[slug]`, `/api/cron/resume-stories` + the GH Actions sweeper (every 2 min, `CRON_SECRET`), `/api/internal/process-story`, the error-classification + prompt-rewrite loop (`classify-image-error.ts`, `sanitize-prompt.ts`), `lib/featured-stories.ts`, the "Your Ideas" wizard step + `custom_*` form fields, and migrations 0003–0007. Update the phase list. Acceptance: every route under `app/api/**` appears; no removed route is mentioned.
 
-### [ ] CTX-2 Refresh or retire `state.md` and `project_plan.md` — Haiku, P1
+### [x] CTX-2 Refresh or retire `state.md` and `project_plan.md` — Haiku, P1
 `state.md` says "Phase 2b, 2026-04-12"; reality is post-Phase-3 production reliability work (July 2026). Replace the `state.md` body with: current phase, last-updated date, and a link to `docs/TASKS.md` as the live backlog. Trim `project_plan.md` to the still-unbuilt vision items (storyboard editor, subscriptions, print-on-demand, classroom, bilingual) with a header pointing to CLAUDE.md for current state. Acceptance: no date/phase claims contradict CLAUDE.md.
 
-### [ ] CTX-3 Add a README.md — Haiku, P1
+### [x] CTX-3 Add a README.md — Haiku, P1
 Repo has none. Short: what the product is, live URL, stack table (condensed from CLAUDE.md), local dev (nvm Node 20, `npm run dev`, `.env.example`), pointers to CLAUDE.md (agent docs) and docs/TASKS.md (backlog). Acceptance: a newcomer can boot dev from the README alone.
 
 ### [ ] CTX-4 Agent-efficacy upgrades to `.claude/` + CLAUDE.md — Sonnet, P1
