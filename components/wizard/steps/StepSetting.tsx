@@ -3,32 +3,13 @@
 import SelectCard from '@/components/ui/SelectCard'
 import Input from '@/components/ui/Input'
 import { WizardFormData } from '@/types'
+import { SETTINGS, COMPANIONS } from '@/lib/wizard-options'
 import StepHeader from '../StepHeader'
 
 interface Props {
   data: WizardFormData
   onChange: (fields: Partial<WizardFormData>) => void
 }
-
-export const SETTINGS = [
-  { value: 'Enchanted Forest',   icon: '🌲', label: 'Enchanted Forest' },
-  { value: 'Outer Space',        icon: '🌌', label: 'Outer Space' },
-  { value: 'Underwater Kingdom', icon: '🐠', label: 'Underwater' },
-  { value: 'Neighborhood',       icon: '🏘️', label: 'Neighborhood' },
-  { value: 'School',             icon: '📚', label: 'School' },
-  { value: 'Farm',               icon: '🐄', label: 'Farm' },
-  { value: 'Jungle',             icon: '🌴', label: 'Jungle' },
-  { value: 'Snowy Mountains',    icon: '⛰️', label: 'Snowy Mountains' },
-]
-
-export const COMPANIONS = [
-  { value: 'Best Friend',      icon: '👫', label: 'Best Friend' },
-  { value: 'Sibling',          icon: '👧', label: 'Sibling' },
-  { value: 'Pet',              icon: '🐕', label: 'Pet' },
-  { value: 'Magical Creature', icon: '✨', label: 'Magical Creature' },
-  { value: 'Talking Animal',   icon: '🦊', label: 'Talking Animal' },
-  { value: 'Wise Elder',       icon: '👴', label: 'Wise Elder' },
-]
 
 export default function StepSetting({ data, onChange }: Props) {
   const companions: string[] = data.supporting_characters

@@ -3,11 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { ArtStyle, WizardFormData, WritingStyle } from '@/types'
 import { fadeUp, springs } from '@/lib/motion'
-import { SKIN_TONES, OUTFITS } from './steps/StepChild'
-import { GENRES } from './steps/StepGenre.data'
-import { LESSONS } from './steps/StepTheme.data'
-import { SETTINGS, COMPANIONS } from './steps/StepSetting'
-import { ART_STYLES, LENGTHS } from './steps/StepStyle'
+import { SKIN_TONES, OUTFITS, GENRES, LESSONS, SETTINGS, COMPANIONS, ART_STYLES, LENGTHS } from '@/lib/wizard-options'
 import { WRITING_STYLE_VOICES, TONE_META, DEPTH_MODIFIERS } from '@/lib/ai/writing-styles'
 
 interface Props {

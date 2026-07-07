@@ -46,7 +46,7 @@ Acceptance: generated story JSON in DB is byte-shape identical; token usage per 
 ### [x] PERF-3 Downgrade the prompt-rewriter model to Haiku — Haiku, P0 — done 2026-07-07
 `lib/ai/sanitize-prompt.ts:44`: `claude-sonnet-4-6` → `claude-haiku-4-5-20251001`. The task (rewrite an image prompt to dodge a safety/format error while preserving character sheet + style prefix) is well within Haiku. Acceptance: build passes; manually trigger one rewrite (feed a known-blocked prompt) and confirm output keeps the sheet + prefix.
 
-### [ ] PERF-4 Trust `page_status` instead of listing Storage per page — Haiku, P1
+### [x] PERF-4 Trust `page_status` instead of listing Storage per page — Haiku, P1 — done 2026-07-07
 `run-story-job.ts:277–281` (`imageExists`) does a `storage.list()` for every not-done page on every (re)claim. Only call it when the page's status is `in_progress` (a prior worker may have crashed between upload and status persist); for `pending` pages skip straight to generation. Acceptance: fresh story does zero `storage.list` calls; resumed story still recovers already-uploaded pages.
 
 ### [x] PERF-5 Slim the status endpoint + adaptive polling — Sonnet, P1
@@ -114,7 +114,7 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [ ] BUG-6 ⚠️ Guard test-mode webhooks in production — Sonnet, P1
 `app/api/stripe/webhook/route.ts:36–58` tries the live secret then the test secret. After a successful `constructEvent`, check `event.livemode`: if `false` in production (`process.env.VERCEL_ENV === 'production'`), log loudly and **skip granting credits** unless `ALLOW_TEST_WEBHOOKS=1` is set (keeps the CLI replay workflow usable). The `unique(stripe_session)` constraint already prevents dupes; this closes the "test event grants live credits" hole. Acceptance: replayed test event in prod logs + creates no `credit_events` row; live events unaffected. Human review required.
 
-### [ ] BUG-7 Remove the dead Google image provider (or revive it) — Sonnet, P1
+### [x] BUG-7 Remove the dead Google image provider (or revive it) — Sonnet, P1 — done 2026-07-07
 `GOOGLE_AI_KEY` has been returning 429 `limit: 0` for all Gemini image models — the "free fallback" is non-functional, and any story routed to it burns all 8 attempts and fails. First verify with one live call (script in scratchpad, not the repo). Then either (a) owner enables billing, or (b) remove `google` from `selectProviderForStyle` fallbacks in `lib/ai/generate-image.ts`, delete the provider branch, and update CLAUDE.md's provider table. Default to (b) if quota is still 0. Acceptance: no code path can select a provider whose env key is absent/dead; docs match.
 
 ### [x] BUG-8 Error boundaries for reader + generating pages — Haiku, P1
@@ -135,7 +135,7 @@ Acceptance: `a@@b.c`, `a@b.`, `a..b@c.d` rejected consistently client + server.
 ### [x] HARD-1 Typed parsing for JSONB columns — Sonnet, P0 — done 2026-07-07 (with BUG-2; note: clampText/isValidEmail logic now lives inside WizardFormSchema, adjust BUG-10/HARD-8 accordingly)
 `run-story-job.ts:315–323` (`parseForm` blind-casts; `parsePages` silently returns `[]`) and `status/route.ts` re-implement ad-hoc parsing. In `lib/validation.ts`, add `StoryPageSchema` + `parseStoryRow()` used by `run-story-job.ts`, `status/route.ts`, `app/read/[slug]/page.tsx`, and `lib/jobs/claim.ts`. Corrupt data → thrown typed error → existing failure paths (job hands off / page 404s) instead of undefined behavior. Acceptance: all `as WizardFormData` / `as Array<…>` casts on DB reads are gone.
 
-### [ ] HARD-2 Split `runStoryJob` into phases — Sonnet, P1 (after PERF-1)
+### [x] HARD-2 Split `runStoryJob` into phases — Sonnet, P1 (after PERF-1) — done 2026-07-07
 `lib/jobs/run-story-job.ts` (347 lines, 267-line function) → `textPhase()`, `imagePhase()` (contains the worker pool + a reusable `generatePage()` — FEAT-3 depends on this), `finalize()`. Pure mechanical extraction, no behavior change; keep the single try/catch + handoff semantics at the top level. Acceptance: diff shows moved code only; build passes; a full story generates end-to-end on a preview deploy.
 
 ### [ ] HARD-3 Central constants — Haiku, P2
@@ -147,7 +147,7 @@ Create `lib/config.ts` gathering: job budgets (`run-story-job.ts:13–17`), `POL
 ### [ ] HARD-5 Standard API error helper — Sonnet, P2
 Routes return `{error}`, `{paywall, packs}`, and bare 500s inconsistently. Add `apiError(status, code, message)` + `apiOk(data)` in `lib/api.ts`; migrate `stories/start`, `status`, `checkout`, `credits/claim` (the webhook keeps Stripe's expected 2xx/4xx semantics). Keep the `paywall` shape working — `WizardContainer` reads it; update both sides together. Acceptance: paywall + error toasts still function in the browser.
 
-### [ ] HARD-6 Wizard options registry — Sonnet, P1
+### [x] HARD-6 Wizard options registry — Sonnet, P1 — done 2026-07-07
 `StoryPreview.tsx` imports option arrays from 9 step files (SKIN_TONES, GENRES, LESSONS, SETTINGS, COMPANIONS, ART_STYLES, LENGTHS, OUTFITS + voice/tone maps) — tight coupling. Move all option arrays to `lib/wizard-options.ts` (one export per array, types alongside); steps and StoryPreview import from there; step files keep only UI. Acceptance: no step file exports data; StoryPreview imports options from exactly one module; wizard renders identically.
 
 ### [ ] HARD-7 UI class-blob dedupe — Haiku, P2

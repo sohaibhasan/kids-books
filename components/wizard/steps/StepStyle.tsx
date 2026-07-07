@@ -1,30 +1,14 @@
 'use client'
 
 import SelectCard from '@/components/ui/SelectCard'
-import { ArtStyle, WizardFormData } from '@/types'
+import { WizardFormData } from '@/types'
+import { ART_STYLES, LENGTHS } from '@/lib/wizard-options'
 import StepHeader from '../StepHeader'
 
 interface Props {
   data: WizardFormData
   onChange: (fields: Partial<WizardFormData>) => void
 }
-
-export const ART_STYLES: { value: ArtStyle; icon: string; label: string; description: string }[] = [
-  { value: 'comic-book',         icon: '💥', label: 'Comic Book',         description: 'Bold outlines, flat colors, action energy' },
-  { value: 'classic-watercolor', icon: '🎨', label: 'Classic Watercolor', description: 'Soft washes, delicate ink, warm tones' },
-  { value: 'paper-collage',      icon: '✂️', label: 'Paper Collage',      description: 'Layered textures, bold cut-out shapes' },
-  { value: 'whimsical-ink',      icon: '🖋️', label: 'Whimsical Ink',     description: 'Loose pen-and-ink, sketchy, expressive' },
-  { value: 'bold-modern',        icon: '✨', label: 'Bold & Modern',      description: 'Flat colors, clean shapes, poster-like' },
-  { value: 'soft-cozy',          icon: '🌙', label: 'Soft & Cozy',        description: 'Warm muted tones, gentle, calming' },
-  { value: 'anime-ghibli',       icon: '🌸', label: 'Anime / Ghibli',     description: 'Soft anime, lush backgrounds, pastel' },
-  { value: 'storybook-realism',  icon: '🎭', label: 'Storybook Realism',  description: 'Painterly detail, dramatic lighting' },
-]
-
-export const LENGTHS: { value: WizardFormData['length']; icon: string; label: string; pages: string }[] = [
-  { value: 'short',  icon: '📄', label: 'Short',  pages: '10 pages' },
-  { value: 'medium', icon: '📖', label: 'Medium', pages: '15 pages' },
-  { value: 'long',   icon: '📚', label: 'Long',   pages: '20 pages' },
-]
 
 export default function StepStyle({ data, onChange }: Props) {
   return (

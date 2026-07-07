@@ -8,6 +8,7 @@ import SelectCard from '@/components/ui/SelectCard'
 import Badge from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
 import { WizardFormData } from '@/types'
+import { SKIN_TONES, HAIR_COLORS, HAIR_STYLES, EYE_COLORS, OUTFITS } from '@/lib/wizard-options'
 import StepHeader from '../StepHeader'
 
 interface Props {
@@ -19,41 +20,6 @@ const PRONOUNS = [
   { label: 'She / Her',   icon: '👧' },
   { label: 'He / Him',    icon: '👦' },
   { label: 'They / Them', icon: '🧒' },
-]
-
-export const SKIN_TONES = [
-  { value: 'light',       label: 'Light',       color: '#FDDCB5' },
-  { value: 'fair',        label: 'Fair',        color: '#F5C5A3' },
-  { value: 'medium',      label: 'Medium',      color: '#D4A373' },
-  { value: 'tan',         label: 'Tan',         color: '#C68C53' },
-  { value: 'brown',       label: 'Brown',       color: '#8D5524' },
-  { value: 'dark brown',  label: 'Dark Brown',  color: '#5C3310' },
-]
-
-const HAIR_COLORS = ['Black', 'Dark Brown', 'Brown', 'Light Brown', 'Blonde', 'Red', 'Auburn', 'Strawberry Blonde']
-const HAIR_STYLES = ['Straight and short', 'Straight and long', 'Wavy and short', 'Wavy and long', 'Curly and short', 'Curly and long', 'Coily / afro', 'Braids', 'Ponytail', 'Two puffs', 'Pigtails', 'Bun', 'Buzz cut']
-export const EYE_COLORS = [
-  { value: 'brown',       label: 'Brown',       color: '#5C3310' },
-  { value: 'dark brown',  label: 'Dark Brown',  color: '#2B1A0C' },
-  { value: 'hazel',       label: 'Hazel',       color: '#A47148' },
-  { value: 'green',       label: 'Green',       color: '#3E7B4E' },
-  { value: 'blue',        label: 'Blue',        color: '#3C7AB8' },
-  { value: 'gray',        label: 'Gray',        color: '#8E9CA8' },
-]
-
-export const OUTFITS = [
-  { value: 'a bright red hoodie with a yellow star on the chest, blue jeans, and white sneakers', label: 'Red Hoodie', icon: '🔴' },
-  { value: 'a purple t-shirt with a rainbow on it, green shorts, and yellow rain boots', label: 'Rainbow Tee', icon: '🌈' },
-  { value: 'a blue denim jacket over a striped white-and-navy shirt, khaki pants, and brown boots', label: 'Denim Jacket', icon: '🧥' },
-  { value: 'a pink princess dress with sparkly silver stars, a small tiara, and silver slippers', label: 'Princess Dress', icon: '👗' },
-  { value: 'a green dinosaur onesie with a hood that has little spikes, and orange sneakers', label: 'Dino Onesie', icon: '🦖' },
-  { value: 'a yellow superhero cape over a blue t-shirt, red shorts, and black boots', label: 'Superhero Cape', icon: '🦸' },
-  { value: 'a cozy orange sweater with a pumpkin on it, dark blue leggings, and brown ankle boots', label: 'Cozy Sweater', icon: '🎃' },
-  { value: 'a white lab coat over a light blue shirt, gray pants, and big round goggles on their head', label: 'Scientist', icon: '🔬' },
-  { value: 'a puffy navy winter coat with a fuzzy hood, a red knit scarf, gray snow pants, and warm brown boots', label: 'Winter Coat', icon: '🧣' },
-  { value: 'a bright yellow tank top with a sun print, turquoise swim shorts, and blue flip-flops', label: 'Summer Fun', icon: '🏖️' },
-  { value: 'a shiny yellow rain jacket with big buttons, dark green rain pants, and red rubber rain boots', label: 'Rainy Day', icon: '🌧️' },
-  { value: 'a red-and-black plaid flannel shirt, olive cargo pants, and tan hiking boots with thick soles', label: 'Fall Flannel', icon: '🍂' },
 ]
 
 function ColorSwatchButton({

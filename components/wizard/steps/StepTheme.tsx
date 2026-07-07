@@ -3,7 +3,7 @@
 import SelectCard from '@/components/ui/SelectCard'
 import { WizardFormData } from '@/types'
 import StepHeader from '../StepHeader'
-import { LESSONS } from './StepTheme.data'
+import { LESSONS } from '@/lib/wizard-options'
 
 interface Props {
   data: WizardFormData

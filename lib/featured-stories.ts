@@ -1,8 +1,7 @@
 import { cookies } from 'next/headers'
 import { supabase } from '@/lib/supabase'
 import { Genre, WizardFormData } from '@/types'
-import { GENRES } from '@/components/wizard/steps/StepGenre.data'
-import { LESSONS } from '@/components/wizard/steps/StepTheme.data'
+import { GENRES, LESSONS } from '@/lib/wizard-options'
 
 const BUCKET = 'story-images'
 const COOKIE_NAME = 'kb_showcase'
