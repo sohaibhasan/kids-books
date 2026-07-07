@@ -136,24 +136,54 @@ function WizardInner() {
     // re-trigger the resume effect (which would re-submit + consume a credit).
     router.replace('/wizard')
 
-    const stashed = sessionStorage.getItem(RESUME_KEY)
-    if (paid && stashed) {
-      try {
-        const form = JSON.parse(stashed) as WizardFormData
+    if (paid) {
+      const stashed = sessionStorage.getItem(RESUME_KEY)
+      let form: WizardFormData | null = null
+      if (stashed) {
+        try {
+          form = JSON.parse(stashed) as WizardFormData
+        } catch (err) {
+          // Corrupt stash — surface the parse error for debugging, then fall through to
+          // the recovery toast below so the user isn't left confused.
+          console.warn('[WizardContainer] Failed to parse stashed wizard data from sessionStorage:', err)
+        }
+      }
+
+      if (form !== null) {
+        // Valid stash: restore form, jump to review, and auto-resubmit.
         setData(form)
-        setStep(8)
-        setFurthestStep(8)
+        setStep(TOTAL_STEPS)
+        setFurthestStep(TOTAL_STEPS)
         toast({ tone: 'success', title: 'Payment received', description: 'Picking up where you left off.' })
         void submit(form)
         return
-      } catch {
-        /* fall through */
       }
+
+      // Stash absent or corrupt: tell the user explicitly so they aren't left wondering
+      // where their paid credit went, then land them somewhere useful.
+      // If in-memory form data is already non-default (child_name differs from the
+      // default empty string — indicates the user still has wizard state alive in this
+      // tab), jump to the review step so they can resubmit immediately. Otherwise leave
+      // them at step 1 to start fresh.
+      //
+      // Stash retention on failed resubmit: the stash is intentionally NOT removed when
+      // submit() fails with a 402 or network error — keeping it allows a subsequent
+      // Stripe redirect to re-attempt the submission automatically. It is only cleared on
+      // a successful enqueue (see submit() above). We do not touch the stash here because
+      // the failure is a parse error, not a submission attempt.
+      toast({
+        tone: 'success',
+        title: 'Payment received — your credit is ready.',
+        description: "We couldn’t restore your previous story details, so please review and submit again.",
+      })
+      if (data.child_name !== defaultData.child_name) {
+        goTo(TOTAL_STEPS)
+      }
+      return
     }
+
     if (reclaimed) {
       toast({ tone: 'success', title: 'Credits restored', description: 'Welcome back — your credits moved with you.' })
-    } else if (paid) {
-      toast({ tone: 'success', title: 'Payment received', description: 'Your credits are ready.' })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
