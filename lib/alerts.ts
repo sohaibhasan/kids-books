@@ -3,7 +3,7 @@ import { sendEmail, type SendEmailResult } from './email'
 
 const ALERT_DEBOUNCE_MS = 60 * 60 * 1000 // 1 hour per provider
 
-type Provider = 'anthropic' | 'openai' | 'recraft' | 'fal' | 'google' | 'unknown'
+type Provider = 'anthropic' | 'openai' | 'recraft' | 'fal' | 'unknown'
 
 interface QuotaSignal {
   provider: Provider
@@ -25,7 +25,6 @@ function classify(err: unknown): QuotaSignal | null {
   if (lower.includes('openai')) provider = 'openai'
   else if (lower.includes('recraft')) provider = 'recraft'
   else if (lower.includes('fal')) provider = 'fal'
-  else if (lower.includes('google') || lower.includes('gemini')) provider = 'google'
   else if (lower.includes('anthropic') || lower.includes('claude')) provider = 'anthropic'
 
   return { provider, status, message: message.slice(0, 400) }
@@ -74,7 +73,6 @@ export async function maybeAlertProviderQuota(err: unknown, contextHint?: string
       openai:    'https://platform.openai.com/account/billing/overview',
       recraft:   'https://www.recraft.ai/profile/api',
       fal:       'https://fal.ai/dashboard/billing',
-      google:    'https://aistudio.google.com/app/apikey',
       unknown:   'https://storybookstudio.org',
     }
 

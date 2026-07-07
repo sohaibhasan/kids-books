@@ -5,11 +5,9 @@ import { STYLE_PREFIXES } from './index'
 // Multi-provider image generation router
 //
 // Each art style routes to the provider that produces the best results for
-// that aesthetic. Today every existing ArtStyle still points at OpenAI to
-// preserve current behavior — the three other providers are stubbed and will
-// be filled in as Phase 2a proceeds.
+// that aesthetic.
 //
-// Planned 8-aesthetic routing (see docs/image-gen-options.md):
+// 8-aesthetic routing (see docs/image-gen-options.md):
 //   Comic Book          → openai
 //   Classic Watercolor  → recraft
 //   Collage / Cutout    → recraft
@@ -18,10 +16,9 @@ import { STYLE_PREFIXES } from './index'
 //   Soft & Cozy         → openai
 //   Anime / Ghibli      → fal (FLUX.2 + Ghibli LoRA)
 //   Storybook Realism   → fal (FLUX.2 Pro)
-//   (Google Nano Banana 2 is the free-tier fallback for any style)
 // ---------------------------------------------------------------------------
 
-export type ImageProvider = 'openai' | 'recraft' | 'fal' | 'google'
+export type ImageProvider = 'openai' | 'recraft' | 'fal'
 
 const STYLE_PROVIDER_MAP: Record<ArtStyle, ImageProvider> = {
   'comic-book': 'openai',
@@ -60,7 +57,6 @@ export async function generateImage(
     case 'openai':  return generateWithOpenAI(prompt)
     case 'recraft': return generateWithRecraft(prompt, style)
     case 'fal':     return generateWithFal(prompt)
-    case 'google':  return generateWithGoogle(prompt)
   }
 }
 
@@ -303,43 +299,3 @@ async function generateWithFal(prompt: string): Promise<Buffer> {
   return Buffer.from(arrayBuffer)
 }
 
-// ---------------------------------------------------------------------------
-// Google Gemini — free-tier image generation (~500/day, no billing)
-// Uses gemini-3.1-flash-image (GA). Google's recommended migration path for
-// the Imagen 4 endpoints discontinued Aug 17, 2026; we use the GA ID rather
-// than the -preview suffix since previews get retired after GA lands.
-// Response contains inline base64 image data.
-// ---------------------------------------------------------------------------
-
-const GOOGLE_IMAGE_MODEL = 'gemini-3.1-flash-image'
-const GOOGLE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_IMAGE_MODEL}:generateContent`
-
-async function generateWithGoogle(prompt: string): Promise<Buffer> {
-  const apiKey = process.env.GOOGLE_AI_KEY
-  if (!apiKey) throw new Error('GOOGLE_AI_KEY not set')
-
-  const res = await fetchWithTimeout(`${GOOGLE_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
-    }),
-  })
-
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Google image generation failed (${res.status}): ${text.slice(0, 200)}`)
-  }
-
-  const data = await res.json()
-  const parts = data.candidates?.[0]?.content?.parts ?? []
-
-  for (const part of parts) {
-    if (part.inlineData?.data) {
-      return Buffer.from(part.inlineData.data, 'base64')
-    }
-  }
-
-  throw new Error('No image data in Google response')
-}

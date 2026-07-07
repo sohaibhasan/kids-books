@@ -27,7 +27,6 @@ export interface ImageErrorClassification {
   is_blocking: boolean                // true when productive retry is not possible (provider_down)
 }
 
-type Provider = 'openai' | 'recraft' | 'fal' | 'google'
 
 const FILTER_PATTERNS = [
   /prompt_is_improper/i,
@@ -55,19 +54,12 @@ const PROMPT_INVALID_PATTERNS = [
   /must be at most/i,
 ]
 
-export function classifyImageError(
-  err: unknown,
-  provider: Provider,
-): ImageErrorClassification {
+export function classifyImageError(err: unknown): ImageErrorClassification {
   const message = (err instanceof Error ? err.message : String(err)).slice(0, 600)
   const status = extractStatus(message, err)
 
   // Provider auth / quota — no retry will help, the operator needs to act.
   if (status === 401 || status === 403) {
-    return shape('provider_down', status, message, { is_blocking: true })
-  }
-  // Google's free tier specifically — quota exhausted, no point in repeating.
-  if (status === 429 && provider === 'google' && /RESOURCE_EXHAUSTED/i.test(message)) {
     return shape('provider_down', status, message, { is_blocking: true })
   }
   // fal.ai async FAILED — body usually carries the reason; treat as no_output

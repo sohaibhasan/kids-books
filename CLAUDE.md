@@ -26,7 +26,7 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 | State | React local state (no global store yet) |
 | Backend | Next.js API routes |
 | AI Story Gen | Anthropic Claude sonnet-4-6 (`@anthropic-ai/sdk`) |
-| AI Image Gen | Multi-provider router (OpenAI, Recraft, fal.ai, Google) — see Image Generation section |
+| AI Image Gen | Multi-provider router (OpenAI, Recraft, fal.ai) — see Image Generation section |
 | Database | Supabase Postgres (`stories`, `credit_events`, `credit_claim_tokens`) |
 | File Storage | Supabase Storage (`story-images` bucket) |
 | Payments | Stripe Checkout (guest mode, one-time credit packs) — `stripe` SDK |
@@ -199,14 +199,15 @@ All story generation (text + images) runs as a Vercel serverless background job 
 
 **Architecture:** Multi-provider routing — each art style maps to the provider that produces the best results for that aesthetic. The style router in `lib/ai/generate-image.ts` selects the provider based on the wizard's `art_style` field.
 
-**Providers (4):**
+**Providers (3):**
 
 | Provider | Env Var | Aesthetics | Cost/Image |
 |----------|---------|-----------|------------|
-| OpenAI gpt-image-1 | `OPENAI_API_KEY` (set) | Comic Book, Whimsical Ink, Soft & Cozy | $0.005–0.04 |
-| Recraft V4 | `RECRAFT_API_KEY` (new) | Classic Watercolor, Collage, Bold & Modern | $0.04 |
-| fal.ai (FLUX.2 Pro + LoRA) | `FAL_KEY` (new) | Anime/Ghibli, Storybook Realism | $0.03–0.055 |
-| Google Nano Banana 2 | `GOOGLE_AI_KEY` (new) | Free-tier fallback for any style | Free (~500/day) |
+| OpenAI gpt-image-1 | `OPENAI_API_KEY` | Comic Book, Whimsical Ink, Soft & Cozy | $0.005–0.04 |
+| Recraft V4 | `RECRAFT_API_KEY` | Classic Watercolor, Collage, Bold & Modern | $0.04 |
+| fal.ai (FLUX.2 Pro + LoRA) | `FAL_KEY` | Anime/Ghibli, Storybook Realism | $0.03–0.055 |
+
+Note: Google Gemini image generation was removed (2026-07-07) — `GOOGLE_AI_KEY` returns 429 `limit: 0` on the free tier for all Gemini image models, with no free quota available.
 
 **8 Art Aesthetics (book-inspired):**
 1. Comic Book (Dog Man) → OpenAI
@@ -291,7 +292,7 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 - **Auto-deploy:** push to `main` → Vercel builds and promotes to production. Push to any other branch → preview deployment. (Connected via the Vercel GitHub App.)
 - **Manual fallback:** `npx vercel --prod --yes` (with nvm Node on PATH; the Vercel CLI is not installed globally on this machine)
 - **Env vars (Production):**
-  - AI: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
+  - AI: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `RECRAFT_API_KEY`, `FAL_KEY`
   - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
   - Freemium gating: `DEVICE_COOKIE_SECRET`, `FREE_STORIES_PER_DAY_GLOBAL`
   - Stripe: `STRIPE_SECRET_KEY` (sk_live), `STRIPE_WEBHOOK_SECRET` (live), `STRIPE_WEBHOOK_SECRET_TEST` (test, fallback), `STRIPE_PRICE_PACK_3`, `STRIPE_PRICE_PACK_10`

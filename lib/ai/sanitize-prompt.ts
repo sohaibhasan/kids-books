@@ -3,7 +3,7 @@ import type { ImageErrorCategory } from './classify-image-error'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-type Provider = 'openai' | 'recraft' | 'fal' | 'google'
+type Provider = 'openai' | 'recraft' | 'fal'
 
 export interface RewriteOptions {
   prompt: string
