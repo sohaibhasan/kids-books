@@ -24,7 +24,7 @@ Suggested order:
 
 ## 1. Performance
 
-### [ ] PERF-1 ⚠️ Parallelize image generation with a bounded worker pool — Opus, P0
+### [x] PERF-1 ⚠️ Parallelize image generation with a bounded worker pool — Opus, P0 — done 2026-07-07 (pending preview-deploy validation before push)
 `lib/jobs/run-story-job.ts:125–227`. Replace the sequential `for (const page of pages)` loop with a concurrency-limited pool (3 workers; no new deps — simple index-cursor async workers). Must preserve:
 - per-page `attempts`/`rewrites` budgets;
 - `persistPageStatus` correctness — serialize writes (single mutex, or persist after each settle from one place);
@@ -34,7 +34,7 @@ Suggested order:
 
 Acceptance: 17-page story wall-clock ≈ ceil(17/3) × per-image time; `page_status` accurate after a crash + cron resume; if 429s spike, the existing transient-retry/backoff path still governs.
 
-### [ ] PERF-2 ⚠️ Stop paying for 17 copies of the character sheet — Opus, P0
+### [x] PERF-2 ⚠️ Stop paying for 17 copies of the character sheet — Opus, P0 — done 2026-07-07 (live-tested; pending preview-deploy validation before push)
 `lib/ai/generate-story.ts:140–239`. Today the prompt orders Claude to paste `character_sheet` verbatim into every `scene_description` (~800 chars × ~17 pages ≈ 40–50% of output tokens). Change:
 - tool schema returns `character_sheet` once + per-page `scene` (scene-only text);
 - server composes `scene_description = stylePrefix + '. ' + character_sheet + '. ' + scene` before writing `pages` to the DB — stored shape and everything downstream (image gen, rewriter, reader) unchanged;
@@ -43,7 +43,7 @@ Acceptance: 17-page story wall-clock ≈ ceil(17/3) × per-image time; `page_sta
 
 Acceptance: generated story JSON in DB is byte-shape identical; token usage per story drops measurably (log `usage` from the final message before/after).
 
-### [ ] PERF-3 Downgrade the prompt-rewriter model to Haiku — Haiku, P0
+### [x] PERF-3 Downgrade the prompt-rewriter model to Haiku — Haiku, P0 — done 2026-07-07
 `lib/ai/sanitize-prompt.ts:44`: `claude-sonnet-4-6` → `claude-haiku-4-5-20251001`. The task (rewrite an image prompt to dodge a safety/format error while preserving character sheet + style prefix) is well within Haiku. Acceptance: build passes; manually trigger one rewrite (feed a known-blocked prompt) and confirm output keeps the sheet + prefix.
 
 ### [ ] PERF-4 Trust `page_status` instead of listing Storage per page — Haiku, P1

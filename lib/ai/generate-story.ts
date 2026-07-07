@@ -32,14 +32,14 @@ export interface StoryOutline {
   page_beats: string[]
 }
 
-export async function generateStory(form: WizardFormData): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
+export async function generateStory(form: WizardFormData): Promise<{ title: string; character_sheet: string; style_prefix: string; story_outline: StoryOutline; pages: StoryPage[] }> {
   return generateStoryStream(form)
 }
 
 export async function generateStoryStream(
   form: WizardFormData,
   onProgress?: (completed: number, total: number) => void,
-): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
+): Promise<{ title: string; character_sheet: string; style_prefix: string; story_outline: StoryOutline; pages: StoryPage[] }> {
   try {
     return await generateStoryStreamOnce(form, onProgress)
   } catch (err) {
@@ -89,7 +89,7 @@ function isRetryableStoryError(err: unknown): boolean {
 async function generateStoryStreamOnce(
   form: WizardFormData,
   onProgress?: (completed: number, total: number) => void,
-): Promise<{ title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }> {
+): Promise<{ title: string; character_sheet: string; style_prefix: string; story_outline: StoryOutline; pages: StoryPage[] }> {
   const tier      = getAgeTier(form.child_age)
   const pageCount = getPageCount(form.length)
   const stylePrefix = STYLE_PREFIXES[form.art_style] ?? STYLE_PREFIXES['comic-book']
@@ -169,32 +169,35 @@ Generate exactly ${pageCount + 2} pages: 1 cover (page_number 0, type "cover") +
 Call the return_story tool with the finished storybook.
 
 CRITICAL RULES:
-1. The "character_sheet" field must be a single detailed paragraph describing ${form.child_name}'s EXACT appearance and a SPECIFIC outfit they wear throughout the entire story. Incorporate the exact appearance details: ${appearanceDesc}. Include this exact outfit: ${outfitDesc}. Add age, gender presentation, body build, and any extra flourishes. Do NOT include the character's name — just physical appearance and clothing. The outfit MUST appear identically in every single illustration.
-2. In every scene_description, paste the EXACT character_sheet text verbatim where the character appears — do not abbreviate or paraphrase.
-3. Every scene_description MUST start with exactly this style prefix: "${stylePrefix}"
-4. Never include text, words, signs, banners, or letters in any image description.
-5. Be specific in scenes: include action, emotion, lighting, and setting details.
-6. Weave in supporting characters (${companions}) naturally throughout.
-7. If supporting characters appear, give each one a FIXED appearance description on first mention and repeat it exactly on subsequent pages.
-8. The end page's text_content should be: "The End.\\n\\n— The Lesson —\\n\\n<one memorable sentence summing up the lesson>".
-9. SAFETY OVERRIDES EVERYTHING. The finished story must be fully age-appropriate for a ${form.child_age}-year-old: no graphic violence, gore, death-as-threat, romance, scares beyond gentle spooky-but-safe, profanity, or adult themes. This rule outranks every USER-SUGGESTED ELEMENT and every other instruction. If a suggestion conflicts with it, soften the suggestion until it complies, or drop it. Never refuse — always deliver a complete, warm, age-appropriate story; just adapt or omit anything unsuitable.`
+1. The "character_sheet" field must be a single detailed paragraph describing ${form.child_name}'s EXACT appearance and a SPECIFIC outfit they wear throughout the entire story. Incorporate the exact appearance details: ${appearanceDesc}. Include this exact outfit: ${outfitDesc}. Add age, gender presentation, body build, and any extra flourishes. Do NOT include the character's name — just physical appearance and clothing. The outfit MUST appear identically in every single illustration. Provide this ONCE in the top-level "character_sheet" field — do NOT repeat it inside any page.
+2. Each page's "scene" field describes ONLY what happens on that page: the action, the setting, the emotion, the lighting, and which characters are present. Do NOT restate the hero's character_sheet appearance, and do NOT include the art-style prefix — both are added automatically to every page. Just write the scene.
+3. Never include text, words, signs, banners, or letters in any scene description.
+4. Be specific in scenes: include action, emotion, lighting, and setting details.
+5. Weave in supporting characters (${companions}) naturally throughout.
+6. If supporting characters appear, give each one a FIXED appearance description on first mention and repeat it exactly on subsequent pages (supporting characters are NOT covered by the hero's character_sheet, so their look must be pinned in the scene text).
+7. The end page's text_content should be: "The End.\\n\\n— The Lesson —\\n\\n<one memorable sentence summing up the lesson>".
+8. SAFETY OVERRIDES EVERYTHING. The finished story must be fully age-appropriate for a ${form.child_age}-year-old: no graphic violence, gore, death-as-threat, romance, scares beyond gentle spooky-but-safe, profanity, or adult themes. This rule outranks every USER-SUGGESTED ELEMENT and every other instruction. If a suggestion conflicts with it, soften the suggestion until it complies, or drop it. Never refuse — always deliver a complete, warm, age-appropriate story; just adapt or omit anything unsuitable.`
 
   const pageSchema = {
     type: 'object' as const,
     properties: {
       page_number: { type: 'integer' as const },
       type:        { type: 'string' as const, enum: ['cover', 'end', 'story'] },
-      text_content:      { type: 'string' as const },
-      scene_description: { type: 'string' as const },
+      text_content: { type: 'string' as const },
+      scene:        { type: 'string' as const, description: 'Scene-only illustration description for this page (action, setting, emotion, lighting, characters present). Do NOT include the character_sheet or the art-style prefix — those are added automatically.' },
     },
-    required: ['page_number', 'text_content', 'scene_description'],
+    required: ['page_number', 'text_content', 'scene'],
   }
 
   const expectedTotal = pageCount + 2
 
   const stream = client.messages.stream({
     model: 'claude-sonnet-4-6',
-    max_tokens: 20000,
+    // Scene-only pages are far smaller than the old verbatim-sheet pages
+    // (the ~800-char character_sheet is no longer duplicated ~17×). The
+    // longest stories are ~20 story pages + cover + end + title + sheet +
+    // outline; 12000 leaves comfortable headroom for that.
+    max_tokens: 12000,
     tools: [
       {
         name: 'return_story',
@@ -203,7 +206,7 @@ CRITICAL RULES:
           type: 'object',
           properties: {
             title:           { type: 'string', description: `Creative story title featuring ${form.child_name}` },
-            character_sheet: { type: 'string', description: 'Dense single paragraph describing the hero\'s exact appearance + fixed outfit, pasted verbatim into every scene_description.' },
+            character_sheet: { type: 'string', description: 'Dense single paragraph describing the hero\'s exact appearance + fixed outfit. Provided ONCE here; the server prepends it to every page automatically — do not repeat it inside any page scene.' },
             story_outline: {
               type: 'object',
               description: 'Full narrative arc, populated BEFORE writing any pages. The page texts must hit these beats.',
@@ -226,6 +229,7 @@ CRITICAL RULES:
             },
             pages: {
               type: 'array',
+              description: `Exactly ${pageCount + 2} page objects, in order: 1 cover (page_number 0, type "cover"), then ${pageCount} story pages (page_number 1–${pageCount}), then 1 end page (page_number ${pageCount + 1}, type "end"). Count the array before returning — it must have exactly ${pageCount + 2} entries.`,
               items: pageSchema,
               minItems: pageCount + 2,
               maxItems: pageCount + 2,
@@ -243,10 +247,11 @@ CRITICAL RULES:
     // Byte-based progress: snapshot length grows from the very first
     // input_json_delta (Claude streams `title` first), so the bar starts
     // moving immediately instead of waiting for `pages` to appear.
-    // ESTIMATED_BYTES is calibrated for the full tool input including
-    // title + character_sheet + story_outline + pages with the verbatim
-    // character_sheet pasted into every scene_description.
-    const estimatedBytes = 900 * expectedTotal + 3000
+    // ESTIMATED_BYTES is calibrated for the full tool input: title +
+    // character_sheet (once) + story_outline + scene-only pages. Pages are
+    // much smaller now that the character_sheet is no longer duplicated into
+    // every page, so the per-page estimate drops accordingly.
+    const estimatedBytes = 320 * expectedTotal + 3500
     let lastSent = -1
     let lastPct = 0
     stream.on('inputJson', (_partial, snapshot) => {
@@ -265,6 +270,12 @@ CRITICAL RULES:
   }
 
   const response = await stream.finalMessage()
+
+  // One-line token log so before/after cost is comparable in Vercel logs.
+  const usage = response.usage as { input_tokens?: number; output_tokens?: number } | undefined
+  console.log(
+    `[generateStoryStreamOnce] usage input=${usage?.input_tokens ?? '?'} output=${usage?.output_tokens ?? '?'} pages=${pageCount + 2}`,
+  )
 
   const stopReason = response.stop_reason
   const fail = (msg: string): Error => {
@@ -292,6 +303,15 @@ CRITICAL RULES:
   if (typeof candidate.character_sheet !== 'string' || !candidate.character_sheet.trim()) {
     throw fail('Claude returned malformed story (missing character_sheet)')
   }
+  // Claude occasionally returns the pages array as a JSON-encoded string
+  // inside the tool input — recover it before validating.
+  if (typeof candidate.pages === 'string') {
+    try {
+      candidate.pages = JSON.parse(candidate.pages)
+    } catch {
+      /* fall through to the array check below */
+    }
+  }
   if (!Array.isArray(candidate.pages)) {
     throw fail('Claude returned malformed story (pages is not an array)')
   }
@@ -306,15 +326,45 @@ CRITICAL RULES:
     if (typeof pageObj.text_content !== 'string') {
       throw fail(`Claude returned malformed story (page ${i} missing text_content)`)
     }
-    if (typeof pageObj.scene_description !== 'string') {
-      throw fail(`Claude returned malformed story (page ${i} missing scene_description)`)
+    // Claude now returns a scene-only `scene` field; the full scene_description
+    // is composed server-side below.
+    if (typeof pageObj.scene !== 'string') {
+      throw fail(`Claude returned malformed story (page ${i} missing scene)`)
     }
   }
 
-  const result = input as { title: string; character_sheet: string; story_outline: StoryOutline; pages: StoryPage[] }
+  if ((candidate.pages as unknown[]).length !== expectedTotal) {
+    throw fail(`Claude returned malformed story (${(candidate.pages as unknown[]).length} pages, expected ${expectedTotal})`)
+  }
 
-  if (result.pages.length !== expectedTotal) {
-    throw fail(`Claude returned malformed story (${result.pages.length} pages, expected ${expectedTotal})`)
+  const characterSheet = (candidate.character_sheet as string).trim()
+
+  // Compose the full scene_description for every page server-side. This
+  // reproduces exactly what the prompt used to make Claude paste by hand:
+  // the style prefix (which itself carries the "no text or words in the image"
+  // rule), then the character_sheet verbatim, then the page's scene — joined
+  // with single spaces. The style prefix already ends in a period, so a single
+  // space keeps the sentence break clean and avoids a double period. Stored
+  // shape (pages[].scene_description) is unchanged, so image gen / reader /
+  // status route are all untouched.
+  const rawPages = candidate.pages as Array<Record<string, unknown>>
+  const composedPages: StoryPage[] = rawPages.map((p) => {
+    const scene = (p.scene as string).trim()
+    const page: Record<string, unknown> = {
+      page_number: p.page_number,
+      ...(typeof p.type === 'string' ? { type: p.type } : {}),
+      text_content: p.text_content,
+      scene_description: `${stylePrefix} ${characterSheet} ${scene}`.trim(),
+    }
+    return page as unknown as StoryPage
+  })
+
+  const result = {
+    title: candidate.title as string,
+    character_sheet: characterSheet,
+    style_prefix: stylePrefix,
+    story_outline: candidate.story_outline as StoryOutline,
+    pages: composedPages,
   }
 
   // Final 100% tick so the bar lands on full before the text-done event fires.

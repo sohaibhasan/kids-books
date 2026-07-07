@@ -71,12 +71,24 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
           last_error: null,
           provider_used: null,
         }))
+        // Stash the character sheet + style prefix in the form JSONB so the
+        // image phase can reuse them without re-extracting via regex (the
+        // scene_description no longer contains a cleanly separable sheet block
+        // by convention — it's server-composed). No DB migration needed; the
+        // image phase falls back to regex extraction for in-flight stories
+        // created before this field existed.
+        const formWithSheet = {
+          ...form,
+          character_sheet: story.character_sheet,
+          style_prefix: story.style_prefix,
+        }
         const { error: updateErr } = await supabase
           .from('stories')
           .update({
             title: story.title,
             pages: story.pages,
             page_status: seededStatus,
+            form: formWithSheet,
             status: 'generating_images',
             last_progress_at: new Date().toISOString(),
           })
@@ -100,8 +112,18 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
     const pages = parsePages(row.pages)
     const artStyle: ArtStyle = (form.art_style as ArtStyle) || 'comic-book'
     const provider: ImageProvider = selectProviderForStyle(artStyle)
-    const characterSheet = extractCharacterSheet(form, pages)
-    const stylePrefix = extractStylePrefix(pages)
+    // Prefer the values stashed on the form during the text phase; fall back to
+    // regex extraction for in-flight stories created before this deploy (their
+    // pages are already composed but the form has no stashed sheet/prefix).
+    const formRecord = form as unknown as Record<string, unknown>
+    const characterSheet =
+      (typeof formRecord.character_sheet === 'string' && formRecord.character_sheet.trim())
+        ? formRecord.character_sheet
+        : extractCharacterSheet(form, pages)
+    const stylePrefix =
+      (typeof formRecord.style_prefix === 'string' && formRecord.style_prefix.trim())
+        ? formRecord.style_prefix
+        : extractStylePrefix(pages)
 
     // Index page_status by page_number for cheap updates.
     const pageStatusMap = new Map<number, PageStatus>()
