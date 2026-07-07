@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getExpectedTotal } from '@/lib/ai/generate-story'
 import type { PageStatus } from '@/lib/jobs/claim'
+import { parsePagesLenient, parseFormLenient } from '@/lib/validation'
 
 const BUCKET = 'story-images'
 
@@ -31,15 +32,22 @@ export async function GET(
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  const pages = parseArray(data.pages) as Array<{ page_number: number; type?: string }>
+  const pages = parsePagesLenient(data.pages)
   const total = pages.length
-  const form = typeof data.form === 'string' ? JSON.parse(data.form) : (data.form ?? {})
+  // parseFormLenient is lenient but can throw when form is not an object at
+  // all — fall back to an empty record so the status endpoint stays resilient.
+  let form: Record<string, unknown>
+  try {
+    form = parseFormLenient(data.form ?? {}) as unknown as Record<string, unknown>
+  } catch {
+    form = {}
+  }
 
   // text_progress: while pages haven't been written yet, estimate from form.length.
   // Once they exist, we're done with the text phase.
   let textProgress: { completed: number; total: number } | null = null
   if (data.status === 'pending' || data.status === 'generating_text') {
-    const expected = getExpectedTotal(form?.length ?? 'medium')
+    const expected = getExpectedTotal(typeof form.length === 'string' ? form.length : 'medium')
     textProgress = { completed: total, total: expected }
   } else {
     textProgress = null
@@ -89,11 +97,6 @@ export async function GET(
     },
     { headers: { 'Cache-Control': 'no-store' } },
   )
-}
-
-function parseArray(raw: unknown): unknown[] {
-  const data = typeof raw === 'string' ? JSON.parse(raw) : raw
-  return Array.isArray(data) ? data : []
 }
 
 function maskEmail(email: string): string {

@@ -99,7 +99,7 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [x] BUG-1 Unhandled rejection from fire-and-forget heartbeats — Haiku, P0 — done 2026-07-07
 `run-story-job.ts:65` passes `() => { void beat() }` into `generateStoryStream`, and `beat()` (`:36–40`) awaits `heartbeat(slug)` with no catch — a transient Supabase error becomes an unhandled rejection inside a `waitUntil` job. Wrap the `beat` body in try/catch (log + continue); same for the `void maybeAlertProviderQuota(...)` calls (`:168`, `:256`) if they can reject. Acceptance: grep shows no bare `void somethingAsync()` in `lib/jobs/`; build passes.
 
-### [ ] BUG-2 ⚠️ Validate the wizard form at the API boundary — Sonnet, P0 (pair with HARD-1 in one PR)
+### [x] BUG-2 ⚠️ Validate the wizard form at the API boundary — Sonnet, P0 — done 2026-07-07 (with HARD-1)
 `app/api/stories/start/route.ts:20–41` only checks `child_name` and email; `art_style`, `length`, `tone`, `writing_style`, `child_age`, `depth_modifiers` flow unvalidated into prompts and the provider router (unknown `art_style` silently falls back at `run-story-job.ts:101`). Add `zod` (new dep); define `WizardFormSchema` in `lib/validation.ts` with enums sourced from `types/index.ts`, `child_age` int 2–12, the existing `clampText` caps folded in, `.strip()` unknown keys. Parse in the route; on failure return the existing `{error}` 400 shape. Acceptance: request with `art_style: "x"` → 400; valid wizard payload unchanged end-to-end.
 
 ### [x] BUG-3 Timeout the Claude calls — Sonnet, P0 — done 2026-07-07
@@ -132,7 +132,7 @@ Acceptance: `a@@b.c`, `a@b.`, `a..b@c.d` rejected consistently client + server.
 
 ## 4. Codebase hardening
 
-### [ ] HARD-1 Typed parsing for JSONB columns — Sonnet, P0 (pair with BUG-2)
+### [x] HARD-1 Typed parsing for JSONB columns — Sonnet, P0 — done 2026-07-07 (with BUG-2; note: clampText/isValidEmail logic now lives inside WizardFormSchema, adjust BUG-10/HARD-8 accordingly)
 `run-story-job.ts:315–323` (`parseForm` blind-casts; `parsePages` silently returns `[]`) and `status/route.ts` re-implement ad-hoc parsing. In `lib/validation.ts`, add `StoryPageSchema` + `parseStoryRow()` used by `run-story-job.ts`, `status/route.ts`, `app/read/[slug]/page.tsx`, and `lib/jobs/claim.ts`. Corrupt data → thrown typed error → existing failure paths (job hands off / page 404s) instead of undefined behavior. Acceptance: all `as WizardFormData` / `as Array<…>` casts on DB reads are gone.
 
 ### [ ] HARD-2 Split `runStoryJob` into phases — Sonnet, P1 (after PERF-1)

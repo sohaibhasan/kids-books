@@ -7,6 +7,7 @@ import { maybeAlertProviderQuota, maybeAlertEmailFailure } from '@/lib/alerts'
 import { sendStorySuccessEmail } from './emails'
 import { claimStory, heartbeat, getStoryRow, type PageStatus, type StoryRow } from './claim'
 import { failStory } from './fail-story'
+import { parseFormLenient, parsePagesLenient } from '@/lib/validation'
 import { ArtStyle, WizardFormData } from '@/types'
 
 const BUCKET = 'story-images'
@@ -63,7 +64,7 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
         .update({ status: 'generating_text', last_progress_at: new Date().toISOString() })
         .eq('slug', slug)
 
-      const form = parseForm(row.form)
+      const form = parseFormLenient(row.form)
       const needsText = !Array.isArray(row.pages) || (row.pages as unknown[]).length === 0
       if (needsText) {
         const story = await generateStoryStream(form, () => { void beat() })
@@ -112,8 +113,8 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
     }
 
     // ---------------------- IMAGE PHASE ----------------------
-    const form = parseForm(row.form)
-    const pages = parsePages(row.pages)
+    const form = parseFormLenient(row.form)
+    const pages = parsePagesLenient(row.pages)
     const artStyle: ArtStyle = (form.art_style as ArtStyle) || 'comic-book'
     const provider: ImageProvider = selectProviderForStyle(artStyle)
     // Prefer the values stashed on the form during the text phase; fall back to
@@ -362,7 +363,7 @@ async function sendSuccessIfNeeded(slug: string): Promise<void> {
     const { data: cover } = supabase.storage
       .from(BUCKET)
       .getPublicUrl(`${slug}/page-00.png`)
-    const form = parseForm(fresh.form)
+    const form = parseFormLenient(fresh.form)
     const result = await sendStorySuccessEmail({
       to: fresh.email,
       title: fresh.title ?? 'Your storybook',
@@ -384,16 +385,6 @@ async function sendSuccessIfNeeded(slug: string): Promise<void> {
   } catch (err) {
     console.error(`[run-story-job ${slug}] success email failed`, err)
   }
-}
-
-function parseForm(raw: unknown): WizardFormData {
-  if (typeof raw === 'string') return JSON.parse(raw) as WizardFormData
-  return raw as WizardFormData
-}
-
-function parsePages(raw: unknown): Array<{ page_number: number; scene_description: string }> {
-  const data = typeof raw === 'string' ? JSON.parse(raw) : raw
-  return Array.isArray(data) ? data : []
 }
 
 function extractCharacterSheet(form: WizardFormData, pages: Array<{ scene_description: string }>): string | undefined {

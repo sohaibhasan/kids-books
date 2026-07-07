@@ -6,6 +6,7 @@ import { getOrSetDeviceId, getFallbackHash } from '@/lib/identity'
 import { consumeOne, getEntitlement, isGloballyThrottled, refundFailedGen, PACKS } from '@/lib/credits'
 import { runStoryJob } from '@/lib/jobs/run-story-job'
 import { WizardFormData } from '@/types'
+import { WizardFormSchema } from '@/lib/validation'
 
 export const maxDuration = 300
 
@@ -17,28 +18,26 @@ export const maxDuration = 300
  * /api/stories/[slug]/status.
  */
 export async function POST(req: NextRequest) {
-  let form: WizardFormData
+  let body: unknown
   try {
-    form = await req.json()
+    body = await req.json()
   } catch {
     return NextResponse.json({ error: 'invalid body' }, { status: 400 })
   }
 
-  if (!form?.child_name?.trim()) {
-    return NextResponse.json({ error: 'child_name is required' }, { status: 400 })
+  // Validate and sanitise the wizard payload.  WizardFormSchema:
+  //   • strips unknown keys
+  //   • enforces enum constraints on art_style, length, tone, writing_style, genre
+  //   • trims child_name and rejects if empty
+  //   • coerces child_age to a number and range-checks 2–12
+  //   • collapses whitespace + clamps custom_* fields (replaces manual clampText)
+  //   • validates email with the same regex as the former isValidEmail guard
+  const parseResult = WizardFormSchema.safeParse(body)
+  if (!parseResult.success) {
+    const message = parseResult.error.issues[0]?.message ?? 'invalid input'
+    return NextResponse.json({ error: message }, { status: 400 })
   }
-  if (form.email && !isValidEmail(form.email)) {
-    return NextResponse.json({ error: 'invalid email' }, { status: 400 })
-  }
-
-  // Harden optional user-injected story elements: collapse whitespace (strips
-  // newlines/tabs a user could use to forge fake prompt-block delimiters) and
-  // clamp to per-field caps that mirror the wizard's client-side maxLength.
-  form.custom_plot_points    = clampText(form.custom_plot_points, 600)
-  form.custom_subjects       = clampText(form.custom_subjects, 300)
-  form.custom_world_details  = clampText(form.custom_world_details, 300)
-  form.custom_special_object = clampText(form.custom_special_object, 120)
-  form.surprise_me = Boolean(form.surprise_me)
+  const form = parseResult.data as unknown as WizardFormData
 
   const { deviceId } = await getOrSetDeviceId()
   const fallbackHash = await getFallbackHash()
@@ -118,14 +117,4 @@ export async function POST(req: NextRequest) {
   }))
 
   return NextResponse.json({ slug })
-}
-
-function isValidEmail(s: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
-}
-
-function clampText(v: unknown, max: number): string | undefined {
-  if (typeof v !== 'string') return undefined
-  const t = v.replace(/\s+/g, ' ').trim().slice(0, max)
-  return t.length ? t : undefined
 }
