@@ -232,7 +232,7 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 - **Auto-deploy:** push to `main` → Vercel builds and promotes to production. Push to any other branch → preview deployment. (Connected via the Vercel GitHub App.)
 - **Manual fallback:** `npx vercel --prod --yes` (with nvm Node on PATH; the Vercel CLI is not installed globally on this machine)
 - **Env vars (Production):**
-  - AI: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`, `HF_TOKEN`
+  - AI: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`
   - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
   - Freemium gating: `DEVICE_COOKIE_SECRET`, `FREE_STORIES_PER_DAY_GLOBAL`
   - Stripe: `STRIPE_SECRET_KEY` (sk_live), `STRIPE_WEBHOOK_SECRET` (live), `STRIPE_WEBHOOK_SECRET_TEST` (test, fallback), `STRIPE_PRICE_PACK_3`, `STRIPE_PRICE_PACK_10`
