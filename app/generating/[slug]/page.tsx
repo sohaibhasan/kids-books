@@ -19,7 +19,6 @@ interface StatusPage {
 }
 
 interface StatusResponse {
-  slug: string
   title: string | null
   status: 'pending' | 'generating_text' | 'generating_images' | 'complete' | 'failed'
   total_pages: number
@@ -27,7 +26,6 @@ interface StatusResponse {
   text_progress: { completed: number; total: number } | null
   email_will_be_sent: boolean
   email_address_masked: string | null
-  last_progress_at: string | null
   failure_reason: string | null
   refunded: boolean
   images_done: boolean
@@ -51,7 +49,14 @@ const ROTATING_COPY_IMAGES = [
   'A touch of magic…',
 ]
 
-const POLL_MS = 3000
+// Adaptive polling intervals:
+//   generating_images → 3 s  (fast feedback as pages complete)
+//   pending / generating_text → 5 s  (text gen is slow; no point hammering)
+//   after 120 s total elapsed → 8 s  (tab left open; be conservative)
+const POLL_MS_IMAGES = 3_000
+const POLL_MS_TEXT = 5_000
+const POLL_MS_SLOW = 8_000
+const SLOW_AFTER_MS = 120_000
 
 export default function GeneratingPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -76,51 +81,65 @@ export default function GeneratingPage() {
 
   // Polling loop. Stops the moment we land on a terminal state (complete /
   // failed / refunded) and redirects on success.
+  // Uses recursive setTimeout so each interval can adapt to the current status:
+  //   generating_images → POLL_MS_IMAGES (3 s)
+  //   pending / generating_text → POLL_MS_TEXT (5 s)
+  //   after SLOW_AFTER_MS elapsed → POLL_MS_SLOW (8 s) regardless of status
   useEffect(() => {
     let cancelled = false
-    let timer: ReturnType<typeof setInterval> | null = null
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const startMs = Date.now()
 
-    const tick = async (): Promise<boolean> => {
+    const poll = async (): Promise<{ cont: boolean; status?: string }> => {
       try {
         const res = await fetch(`/api/stories/${slug}/status`, { cache: 'no-store' })
         if (!res.ok) {
           if (res.status === 404) {
             setFatal('We can\'t find this story. Try starting a new one.')
-            return false
+            return { cont: false }
           }
-          return true
+          return { cont: true }
         }
         const body = (await res.json()) as StatusResponse
-        if (cancelled) return false
+        if (cancelled) return { cont: false }
         setSnapshot(body)
         if (body.images_done || body.status === 'complete') {
           setTimeout(() => router.push(`/read/${slug}`), 900)
-          return false
+          return { cont: false }
         }
         if (body.status === 'failed' || body.refunded) {
-          return false
+          return { cont: false }
         }
-        return true
+        return { cont: true, status: body.status }
       } catch {
-        return true
+        return { cont: true }
       }
     }
 
+    const scheduleNext = (status?: string) => {
+      if (cancelled) return
+      const elapsed = Date.now() - startMs
+      const delay =
+        elapsed >= SLOW_AFTER_MS
+          ? POLL_MS_SLOW
+          : status === 'generating_images'
+            ? POLL_MS_IMAGES
+            : POLL_MS_TEXT
+
+      timer = setTimeout(async () => {
+        const { cont, status: nextStatus } = await poll()
+        if (cont && !cancelled) scheduleNext(nextStatus)
+      }, delay)
+    }
+
     void (async () => {
-      const keepGoing = await tick()
-      if (!keepGoing || cancelled) return
-      timer = setInterval(async () => {
-        const cont = await tick()
-        if (!cont && timer) {
-          clearInterval(timer)
-          timer = null
-        }
-      }, POLL_MS)
+      const { cont, status } = await poll()
+      if (cont && !cancelled) scheduleNext(status)
     })()
 
     return () => {
       cancelled = true
-      if (timer) clearInterval(timer)
+      if (timer) clearTimeout(timer)
     }
   }, [slug, router])
 

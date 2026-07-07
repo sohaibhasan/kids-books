@@ -23,7 +23,7 @@ export async function GET(
   const { data, error } = await supabase
     .from('stories')
     .select(
-      'slug, title, images_done, status, pages, page_status, last_progress_at, failure_reason, email, notify_email_sent_at, form',
+      'title, images_done, status, pages, page_status, failure_reason, email, notify_email_sent_at, form',
     )
     .eq('slug', slug)
     .maybeSingle()
@@ -49,8 +49,6 @@ export async function GET(
   if (data.status === 'pending' || data.status === 'generating_text') {
     const expected = getExpectedTotal(typeof form.length === 'string' ? form.length : 'medium')
     textProgress = { completed: total, total: expected }
-  } else {
-    textProgress = null
   }
 
   const pageStatus: PageStatus[] = Array.isArray(data.page_status)
@@ -73,16 +71,21 @@ export async function GET(
     }
   })
 
-  const { data: refundRow } = await supabase
-    .from('credit_events')
-    .select('id')
-    .eq('story_slug', slug)
-    .eq('reason', 'refund_failed_gen')
-    .maybeSingle()
+  // Only query credit_events when the story has already failed — the
+  // generating page only needs the refunded flag in that terminal state.
+  let refunded = false
+  if (data.status === 'failed') {
+    const { data: refundRow } = await supabase
+      .from('credit_events')
+      .select('id')
+      .eq('story_slug', slug)
+      .eq('reason', 'refund_failed_gen')
+      .maybeSingle()
+    refunded = !!refundRow
+  }
 
   return NextResponse.json(
     {
-      slug,
       title: data.title,
       status: data.status,
       total_pages: total,
@@ -90,9 +93,8 @@ export async function GET(
       text_progress: textProgress,
       email_will_be_sent: !!data.email && !data.notify_email_sent_at,
       email_address_masked: data.email ? maskEmail(data.email as string) : null,
-      last_progress_at: data.last_progress_at,
       failure_reason: data.failure_reason,
-      refunded: !!refundRow,
+      refunded,
       images_done: Boolean(data.images_done),
     },
     { headers: { 'Cache-Control': 'no-store' } },
