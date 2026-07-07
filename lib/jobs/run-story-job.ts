@@ -120,25 +120,38 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
       }
     }
 
+    // First fatal page wins; workers stop pulling once this is set.
     let terminalFailure: string | null = null
+    // Set once the soft deadline is reached — workers stop pulling, in-flight
+    // pages settle, then the main flow hands off to the cron sweeper.
+    let deadlineReached = false
 
-    for (const page of pages) {
+    // Serialize page_status writes across the worker pool: every persist is
+    // chained onto the previous one so upserts never overlap or reorder. All
+    // workers mutate the SAME shared pageStatusMap, so each write sees the
+    // latest merged snapshot.
+    let persistChain: Promise<void> = Promise.resolve()
+    const persistSafe = (): Promise<void> => {
+      persistChain = persistChain
+        .then(() => persistPageStatus(slug, pageStatusMap))
+        .catch(err => console.warn(`[run-story-job ${slug}] page_status persist failed`, err))
+      return persistChain
+    }
+
+    // Process a single page: recovery check + the transient/rewrite attempt
+    // loop. Mutates that page's entry in pageStatusMap and, on a fatal page,
+    // records the first terminalFailure. Never calls failStory itself.
+    const processPage = async (page: { page_number: number; scene_description: string }): Promise<void> => {
       const status = pageStatusMap.get(page.page_number)!
-      if (status.state === 'done') continue
-
-      if (deadlineHit()) {
-        await persistPageStatus(slug, pageStatusMap)
-        await heartbeat(slug)
-        return { finalStatus: 'in_progress_handed_off' }
-      }
+      if (status.state === 'done') return
 
       const filename = `${slug}/page-${String(page.page_number).padStart(2, '0')}.png`
 
       // If the image was uploaded by a prior crashed worker, just record it.
       if (await imageExists(slug, page.page_number)) {
         status.state = 'done'
-        await persistPageStatus(slug, pageStatusMap)
-        continue
+        await persistSafe()
+        return
       }
 
       let currentPrompt = page.scene_description
@@ -146,6 +159,12 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
       const previousRewrites: string[] = status.previous_rewrites ?? []
 
       while (status.attempts < MAX_ATTEMPTS_PER_PAGE && !pageFatal) {
+        // Bail out between attempts if the deadline hit — leave the page
+        // 'pending'/'in_progress' (NOT 'failed') so the sweeper re-claims it.
+        if (deadlineHit()) {
+          deadlineReached = true
+          return
+        }
         status.state = 'in_progress'
         status.provider_used = provider
         status.attempts += 1
@@ -213,18 +232,46 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
 
       if (status.state !== 'done') {
         if (!pageFatal) {
+          // Loop exited without success and without a fatal reason — either the
+          // attempt cap was hit or the deadline aborted us mid-loop. If the
+          // deadline aborted, leave the page recoverable (don't mark failed).
+          if (deadlineReached) return
           pageFatal = `hit per-page attempt cap (${MAX_ATTEMPTS_PER_PAGE}) without success`
         }
         status.state = 'failed'
         status.last_error = pageFatal
-        terminalFailure = pageFatal
-        await persistPageStatus(slug, pageStatusMap)
-        break  // single page failure terminates the whole story
+        // First fatal page wins; single page failure terminates the story.
+        if (!terminalFailure) terminalFailure = pageFatal
+        await persistSafe()
+        return
       }
 
-      await persistPageStatus(slug, pageStatusMap)
+      await persistSafe()
       await beat()
     }
+
+    // Bounded worker pool: 3 workers share a single index cursor and each pulls
+    // the next page until the list is exhausted, the deadline hits, or a
+    // terminal failure is recorded. In-flight pages always settle (we never
+    // abort mid-upload).
+    const cursor = { i: 0 }
+    const worker = async (): Promise<void> => {
+      while (true) {
+        if (terminalFailure || deadlineReached) return
+        if (deadlineHit()) {
+          deadlineReached = true
+          return
+        }
+        const idx = cursor.i++
+        if (idx >= pages.length) return
+        await processPage(pages[idx])
+      }
+    }
+    await Promise.all([worker(), worker(), worker()])
+
+    // Drain any in-flight persist so the DB reflects the final merged map. All
+    // workers have returned, so no new persistSafe calls can race this.
+    await persistChain
 
     // ---------------------- FINALIZE ----------------------
     if (terminalFailure) {
@@ -232,8 +279,9 @@ export async function runStoryJob(slug: string): Promise<JobResult> {
     }
 
     const everyDone = pages.every(p => pageStatusMap.get(p.page_number)?.state === 'done')
-    if (!everyDone) {
-      // Should be unreachable unless deadlineHit caught us first (already handled).
+    if (deadlineReached || !everyDone) {
+      // Soft-deadline handoff (or an otherwise-incomplete run): persist + beat
+      // and let the cron sweeper re-claim and finish the remaining pages.
       await persistPageStatus(slug, pageStatusMap)
       await heartbeat(slug)
       return { finalStatus: 'in_progress_handed_off' }
