@@ -171,7 +171,7 @@ Acceptance: build passes; CLAUDE.md links updated if (b) executes.
 
 ## 5. Global context updates
 
-### [ ] CTX-1 Rewrite CLAUDE.md architecture sections — Sonnet, P0
+### [x] CTX-1 Rewrite CLAUDE.md architecture sections — Sonnet, P0 — done 2026-07-07
 CLAUDE.md documents deleted routes (`POST /api/stories`, SSE `GET /api/stories/[slug]/images` with event shapes) and omits the real production architecture. Rewrite "Implemented API Endpoints" and the app-structure tree, and add a "Background job pipeline" section covering: `POST /api/stories/start` (credit-first + refund-on-failure), `lib/jobs/run-story-job.ts` (claim/heartbeat/soft-deadline/attempt budgets/`page_status`), the `/api/stories/[slug]/status` polling contract, `/api/stories/[slug]/abandon`, `/api/admin/story-email/[slug]`, `/api/cron/resume-stories` + the GH Actions sweeper (every 2 min, `CRON_SECRET`), `/api/internal/process-story`, the error-classification + prompt-rewrite loop (`classify-image-error.ts`, `sanitize-prompt.ts`), `lib/featured-stories.ts`, the "Your Ideas" wizard step + `custom_*` form fields, and migrations 0003–0007. Update the phase list. Acceptance: every route under `app/api/**` appears; no removed route is mentioned.
 
 ### [ ] CTX-2 Refresh or retire `state.md` and `project_plan.md` — Haiku, P1

@@ -44,52 +44,82 @@ app/
   page.tsx                        ← Landing page (marketing components)
   layout.tsx                      ← Loads Fraunces + Inter + Fredoka via next/font
   globals.css                     ← Tailwind v4 + design tokens (@theme inline)
-  wizard/page.tsx                 ← 7-step story wizard
-  generating/[slug]/page.tsx      ← Live image generation progress (SSE)
+  wizard/page.tsx                 ← 8-step story wizard (includes StepIdeas for custom plot/world/object fields)
+  stories/page.tsx                ← Device-local "My Stories" library (localStorage kb_my_stories)
+  generating/[slug]/page.tsx      ← Generation progress screen; polls /api/stories/[slug]/status every 3s
   read/[slug]/page.tsx            ← Story reader (server component)
-  api/stories/route.ts            ← POST: Claude story gen → Supabase insert → returns slug
-  api/stories/[slug]/images/route.ts  ← GET SSE: image gen → Supabase Storage; streams per-page progress + URL
+  api/stories/start/route.ts      ← POST: validate → consume credit → insert pending row → waitUntil(runStoryJob) → return {slug}
+  api/stories/[slug]/status/route.ts  ← GET: polling endpoint; returns status, per-page states + image URLs, text_progress, email info
+  api/stories/[slug]/abandon/route.ts ← POST: refund credit when client gives up on a failed story
+  api/checkout/route.ts           ← POST: create Stripe Checkout Session (guest mode)
+  api/stripe/webhook/route.ts     ← POST: handle checkout.session.completed; grant credits; mint magic-link token
+  api/credits/claim/route.ts      ← GET: redeem magic-link token; rebind device cookie
+  api/cron/resume-stories/route.ts ← GET: sweeper cron (60s cap); fails exhausted jobs, dispatches stale slugs to /api/internal/process-story
+  api/internal/process-story/route.ts ← POST: 300s worker invoked by cron per stale slug; calls runStoryJob
+  api/admin/story-email/[slug]/route.ts ← GET/POST: inspect or force-resend a story's completion email (requires CRON_SECRET)
 components/
   marketing/                      ← Header, Hero, HowItWorks, SampleShowcase, BottomCTA, Footer
-  wizard/WizardContainer.tsx      ← Wizard state + navigation (7 steps), ToastProvider, AnimatePresence
+  wizard/WizardContainer.tsx      ← Wizard state + navigation (8 steps), ToastProvider, AnimatePresence
   wizard/StepHeader.tsx           ← Eyebrow + title + description per step
   wizard/StoryPreview.tsx         ← Sticky right-side "Your story so far" panel (lg+), fills in section-by-section as user advances through steps
-  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepReview (each exports its option arrays — SKIN_TONES, GENRES, LESSONS, etc. — reused by StoryPreview)
+  wizard/steps/                   ← StepChild, StepGenre, StepTheme, StepSetting, StepStyle, StepVoice, StepIdeas, StepReview (each exports its option arrays — SKIN_TONES, GENRES, LESSONS, etc. — reused by StoryPreview)
   reader/StoryReader.tsx          ← Page-by-page reader client component
   reader/ReaderChrome.tsx         ← Auto-hiding floating top bar
   reader/ReaderNav.tsx            ← Unified bottom nav bar (prev/next + dot scrubber w/ hover thumbnails; page label on mobile)
   reader/SharePopover.tsx         ← Radix Popover for copy/native-share/print
   ui/                             ← Button, Input, SelectCard, Card, Badge, Chip, Progress, Stepper, IconButton, Toast (Radix), Select (Radix)
 lib/
-  ai/generate-story.ts            ← Claude API call, age-tier vocab, writing voice + depth injection, JSON output
+  ai/generate-story.ts            ← Claude API call (120s timeout, maxRetries 1), age-tier vocab, writing voice + depth injection, JSON output; Claude returns character_sheet once + scene-only pages
   ai/generate-image.ts            ← Multi-provider image router, returns Buffer
+  ai/classify-image-error.ts      ← Classifies thrown image errors → transient / prompt_filter / prompt_invalid / no_output / provider_down
+  ai/sanitize-prompt.ts           ← rewritePromptForError: asks Claude Haiku (30s timeout) to rewrite a failed prompt based on error category
   ai/index.ts                     ← STYLE_PREFIXES map per ArtStyle
   ai/writing-styles.ts            ← WRITING_STYLE_VOICES, TONE_META, DEPTH_MODIFIERS
+  jobs/run-story-job.ts           ← Full job lifecycle: claim → text phase → image phase (3-worker pool, per-page attempt/rewrite budgets) → finalize
+  jobs/claim.ts                   ← claimStory (atomic UPDATE), heartbeat, findStaleJobs, findExhaustedJobs; defines StoryRow + PageStatus types
+  jobs/fail-story.ts              ← failStory: refund + mark failed + send failure email (idempotent)
+  jobs/emails.ts                  ← sendStorySuccessEmail / sendStoryFailureEmail via lib/email
+  featured-stories.ts             ← getShowcaseStories: picks hero + 4 samples from featured_candidate rows; pins selection in session cookie
+  my-stories.ts                   ← localStorage-backed device library (addMyStory, getMyStories, useSyncExternalStore adapters)
+  identity.ts                     ← getOrSetDeviceId (signed kb_device cookie), getFallbackHash (sha256 ip+ua+accept-language)
+  credits.ts                      ← getEntitlement, consumeOne, refundFailedGen, isGloballyThrottled, PACKS
+  stripe.ts                       ← Stripe client + checkout helpers
+  email.ts                        ← sendEmail via Resend REST API
   motion.ts                       ← Framer-motion variants, springs, durations
   utils.ts                        ← cn() class-merge helper
   utils/slug.ts                   ← makeSlug()
 types/index.ts                    ← WizardFormData, Story, Page, ArtStyle, etc.
-public/generated/[slug]/          ← story.json + page-XX.png (gitignored)
 ```
 
 ### Design System (Phase 2c)
 
 Warm-modern aesthetic — softened coral + honey on cream cream surfaces, Fraunces display for emotional moments + Inter for UI. Soft layered shadows replace hard offsets. Tokens live in **one file**, `app/globals.css`, exposed to Tailwind via `@theme inline` (color, type, radius, shadow, motion). Add new tokens there; they become utilities everywhere automatically. Story-palette tints (`--story-rose/sage/apricot/sky/lavender`) are used for per-card tinted selections in the wizard. Animations honor `prefers-reduced-motion` globally and use variants from `lib/motion.ts`.
 
-### Generated Story JSON Shape (Next.js)
+### Generated Story JSON Shape (stories table)
 
-```json
-{
-  "slug": "story-slug",
-  "title": "Story Title",
-  "form": { "...wizard inputs..." },
-  "pages": [{ "page_number", "type", "text_content", "scene_description" }],
-  "created_at": "ISO timestamp",
-  "images_done": true
-}
+Key columns on the `stories` row (see `supabase/migrations/0006_background_jobs.sql` for full DDL):
+
+```
+slug                 — unique URL key
+title                — set by Claude during text phase (placeholder "Creating story…" until then)
+status               — pending | generating_text | generating_images | complete | failed
+form                 — WizardFormData JSONB; after text phase also carries character_sheet + style_prefix
+pages                — JSONB array of { page_number, type, text_content, scene_description }
+page_status          — JSONB array of PageStatus per page (state, attempts, rewrites, last_error, provider_used)
+images_done          — boolean; true only when status = complete
+device_id            — signed cookie value used for entitlement checks
+fallback_hash        — sha256(ip+ua+accept-language) secondary identity
+email                — optional; supplied in wizard for a "ready" notification
+notify_email_sent_at — timestamp; prevents double-send
+credit_event_id      — links to credit_events row consumed for this story (null for free tier)
+featured_candidate   — boolean opt-in for landing-page showcase
+failure_reason       — last terminal error message (≤600 chars)
+attempts_total       — total claim count across all workers
+attempts_remaining   — starts at 6; decremented each claim; 0 → terminal fail
+last_progress_at     — heartbeat timestamp; cron uses < now()-90s to detect stale jobs
 ```
 
-`page.type` is `"cover"`, `"end"`, or omitted (story page).
+`page.type` is `"cover"`, `"end"`, or omitted (story page). `scene_description` on each page is the server-composed image prompt: `style_prefix + character_sheet + scene` (server composes it from the stashed `form.character_sheet` / `form.style_prefix`).
 
 ### GitHub Pages Static Reader (Prototype)
 
@@ -119,15 +149,44 @@ User → Story → Page (text + illustration + scene prompt)
 ### Implemented API Endpoints
 
 ```
-POST   /api/stories                     → Wizard inputs → Claude story JSON → Supabase insert → returns {slug}
-GET    /api/stories/[slug]/images       → SSE stream: generates images via the multi-provider router, uploads to Supabase Storage, streams progress (maxDuration=300)
+POST   /api/stories/start                      → validate + consume credit → insert pending row → kick runStoryJob via waitUntil → return {slug}
+GET    /api/stories/[slug]/status              → polling endpoint (3s interval); returns status, per-page states + image URLs, text_progress, failure_reason, refund flag
+POST   /api/stories/[slug]/abandon             → refund credit when client gives up on a failed story (idempotent)
+GET    /api/cron/resume-stories                → cron sweeper: fail exhausted jobs + dispatch stale slugs to /api/internal/process-story (requires CRON_SECRET; 60s cap)
+POST   /api/internal/process-story             → per-story resumed worker with 300s cap; called by cron sweeper (requires CRON_SECRET)
+GET    /api/admin/story-email/[slug]           → inspect email delivery state for a story (requires CRON_SECRET; fails closed)
+POST   /api/admin/story-email/[slug]           → force-resend success email (requires CRON_SECRET)
+POST   /api/checkout                           → create Stripe Checkout Session for a credit pack
+POST   /api/stripe/webhook                     → handle checkout.session.completed; grant credits + mint magic-link claim token
+GET    /api/credits/claim                      → redeem magic-link token; rebind kb_device cookie to original source_device
 ```
 
-**SSE event shapes:**
-- `start` — `{ type, total }`
-- `progress` — `{ type, page, total, url, cached? }` (per-page; `url` is the public Supabase Storage URL — consumed by the generating page to fade in real thumbnails as pages complete)
-- `error` — `{ type, page, message }`
-- `done` — `{ type, success, total }`
+### Background Job Pipeline
+
+All story generation (text + images) runs as a Vercel serverless background job rather than inside an SSE stream, so closing the browser tab cannot abort generation.
+
+**Status lifecycle:** `pending` → `generating_text` → `generating_images` → `complete` / `failed`
+
+**Credit flow:** credit is consumed up front in `POST /api/stories/start`; if the story `insert` fails the credit is refunded immediately. If the job fails terminally later, `failStory` (`lib/jobs/fail-story.ts`) issues an idempotent refund via `refundFailedGen`.
+
+**Per-run lifecycle (`lib/jobs/run-story-job.ts`):**
+1. **Claim** — `claimStory` (`lib/jobs/claim.ts`) issues an atomic `UPDATE ... RETURNING` guarded by `attempts_remaining > 0`. A pending row is always claimable; an in-flight row is only claimable after `last_progress_at < now() - 90s` (stale). Exactly one concurrent worker wins.
+2. **Heartbeat** — the worker bumps `last_progress_at` every 25s so the cron sweeper leaves it alone.
+3. **Soft deadline** — at 240s (headroom under the 300s Vercel function cap) the worker stops pulling new pages and hands the partially-complete story to the cron sweeper.
+4. **Text phase** — calls `generateStoryStream` (Claude, 120s timeout, `maxRetries 1`). Claude returns the `character_sheet` once; the server composes `scene_description = style_prefix + character_sheet + scene` per page and stashes `character_sheet` + `style_prefix` in the `form` JSONB.
+5. **Image phase** — 3-worker pool processes pages in parallel. Per page:
+   - Checks Supabase Storage first (prior crashed worker may have already uploaded it).
+   - Up to `MAX_TRANSIENT_RETRIES` (4) same-prompt retries with exponential backoff for transient errors.
+   - Up to `MAX_REWRITES` (4) prompt rewrites via `rewritePromptForError` (Claude Haiku, 30s timeout) for content-filter / no-output / invalid-prompt errors; each rewrite gets its own retry budget.
+   - `classifyImageError` (`lib/ai/classify-image-error.ts`) maps the thrown error to a category that drives the retry/rewrite/bail decision.
+   - Per-page `page_status` JSONB is persisted after every state change; writes are serialized through a promise chain so map updates never race.
+6. **Finalize** — on success: `status = complete`, `images_done = true`, send success email (if `email` set and `notify_email_sent_at` null). On terminal failure: `failStory` → refund + `status = failed` + send failure email.
+
+**Sweeper (`/api/cron/resume-stories`, 60s cap) — triggered by GitHub Actions every 2 min:**
+- Phase 1: `findExhaustedJobs` — terminally fail in-flight rows with `attempts_remaining ≤ 0` that have been stale >5 min.
+- Phase 2: `findStaleJobs` — dispatch each recoverable stale slug to `POST /api/internal/process-story` (fire-and-forget, each with its own 300s cap so workers don't starve under the cron's 60s limit).
+
+**GitHub Actions cron** (`.github/workflows/cron-resume-stories.yml`): runs every 2 minutes. Vercel Hobby caps native crons at once/day, so GH Actions is used instead. Requires `CRON_SECRET` repo secret.
 
 ### User Flow
 
@@ -208,7 +267,7 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 
 - **Identity:** signed first-party cookie `kb_device` (HMAC via `DEVICE_COOKIE_SECRET`) plus a server-side `sha256(ip + ua + accept-language)` fallback hash. Free allowance is "burnt" if either matches a prior `stories` row, so clearing cookies on the same browser/network does not reset it.
 - **Credits ledger:** `credit_events` table (event-sourced; balance = SUM of deltas). `+N` on Stripe `checkout.session.completed`, `−1` per paid generation. `unique(stripe_session)` makes the webhook idempotent.
-- **Gate point:** `app/api/stories/route.ts` resolves identity, calls `getEntitlement()` from `lib/credits.ts`, returns **402 `{ paywall: true, packs }`** before invoking Claude when the device has no free allowance and no balance.
+- **Gate point:** `app/api/stories/start/route.ts` resolves identity, calls `getEntitlement()` from `lib/credits.ts`, returns **402 `{ paywall: true, packs }`** before consuming any credit or invoking Claude when the device has no free allowance and no balance.
 - **Checkout:** `POST /api/checkout { pack: 'solo' | 'small' | 'large' }` → Stripe Checkout Session (guest mode; prices via `STRIPE_PRICE_PACK_1` / `STRIPE_PRICE_PACK_3` / `STRIPE_PRICE_PACK_10`). Success URL `/wizard?paid=1`; the wizard stashes in-flight `WizardFormData` in `sessionStorage` before redirect and auto-resubmits on return.
 - **Pricing (current):** $2 / 1 story, $5 / 3 stories ($1.67 ea), $15 / 10 stories ($1.50 ea — the floor, set at 1.25× worst-case generation cost). Display strings live in `lib/credits.ts` (`PACKS`); marketing copy in `components/marketing/Pricing.tsx`.
 - **Cross-device recovery:** webhook mints a `credit_claim_tokens` row and emails a magic link via Resend. `GET /api/credits/claim?token=…` rebinds the cookie to the original `source_device`.
@@ -265,7 +324,10 @@ npm run build
 - **Phase 1 (MVP)** ✅ Complete — Wizard → Claude story gen → OpenAI images → Supabase → Vercel. Character consistency via structured fields + character sheets.
 - **Phase 2a** ✅ Complete — Multi-provider image routing: 8 book-inspired art aesthetics, each routed to best provider (OpenAI, Recraft, fal.ai/FLUX, Google free tier). Wizard UI exposes all 8 styles (`components/wizard/steps/StepStyle.tsx`). End-to-end testing complete across all provider routes.
 - **Phase 2b.1** ✅ Complete — Story variety & depth: 8 writing-voice presets, 6 tones, 4 optional depth modifiers (plot-twist, sensory-rich, vocab-stretch, character-arc). New `StepVoice` wizard step + `lib/ai/writing-styles.ts`.
-- **Phase 2c** ✅ Complete — End-to-end visual redesign. New design system in `app/globals.css` (warm-modern palette, Fraunces+Inter, soft elevation, motion tokens). Primitives rebuilt + new ones added (Card/Badge/Chip/Progress/Stepper/IconButton/Toast/Select). Marketing landing rewrite. Wizard chrome with sticky footer nav, AnimatePresence step transitions, toast errors, jump-to-edit review with cover preview. Generating screen with rotating copy + real per-page thumbnail grid (powered by extended SSE `url` field). Reader with auto-hiding chrome, slide+fade transitions, swipe gestures, glass IconButton chevrons, Scrubber, SharePopover, and Fraunces drop-cap story prose.
+- **Phase 2c** ✅ Complete — End-to-end visual redesign. New design system in `app/globals.css` (warm-modern palette, Fraunces+Inter, soft elevation, motion tokens). Primitives rebuilt + new ones added (Card/Badge/Chip/Progress/Stepper/IconButton/Toast/Select). Marketing landing rewrite. Wizard chrome with sticky footer nav, AnimatePresence step transitions, toast errors, jump-to-edit review with cover preview. Generating screen with rotating copy + real per-page thumbnail grid (polling-driven via `/api/stories/[slug]/status`). Reader with auto-hiding chrome, slide+fade transitions, swipe gestures, glass IconButton chevrons, Scrubber, SharePopover, and Fraunces drop-cap story prose.
 - **Phase 3 (Monetization)** ✅ Complete — Freemium gating live in production at `storybookstudio.org`. Free first story per device (signed cookie + IP/UA fallback hash), then prepaid Stripe credit packs ($5/3 stories, $12/10 stories). Magic-link cross-device recovery via Resend (`support.storybookstudio.org`). Webhook handler accepts both live + test signatures. End-to-end validated: free gate, paywall trigger, Stripe Checkout (live mode), credit grant + consume, magic-link delivery. See "Monetization (Freemium)" section.
+- **Phase 3b (Background jobs)** ✅ Complete — Generation moved from SSE streams to Vercel background jobs (`waitUntil` + cron sweeper). 3-worker image pool, per-page `page_status` tracking, error classification + Claude Haiku prompt rewrites, heartbeat/claim mutual exclusion, credit consume-then-refund, success/failure transactional emails. Device-local "My Stories" library (`app/stories/page.tsx`). "Your Ideas" wizard step for custom plot/world/object fields. Featured-story showcase driven from `featured_candidate` DB rows.
 - **Phase 2b (remaining)** — Storyboard editor, FLUX.1 Kontext character consistency upgrade, read-aloud, night mode, narrative structure presets, POV selector, bilingual output
 - **Phase 4** — Subscriptions, print-on-demand, classroom accounts, optional user accounts for richer library/history
+
+Prioritized backlog with per-task model recommendations and acceptance criteria lives in `docs/TASKS.md`.
