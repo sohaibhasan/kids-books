@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { motion } from 'motion/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -71,9 +72,15 @@ export default function ReaderNav({
                 {/* Hover thumbnail (desktop) */}
                 {p.illustration_url && (
                   <span className="hidden sm:block pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <span className="block size-16 rounded-md overflow-hidden border border-white/20 shadow-lg">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.illustration_url} alt="" className="w-full h-full object-cover" />
+                    {/* relative + explicit block size give next/image a positioned context for fill */}
+                    <span className="relative block size-16 rounded-md overflow-hidden border border-white/20 shadow-lg">
+                      <Image
+                        src={p.illustration_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                      />
                     </span>
                   </span>
                 )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { ImageOff, Sparkles } from 'lucide-react'
@@ -45,6 +46,29 @@ export default function StoryReader({ title, pages }: Props) {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [current]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Preload adjacent pages into the browser cache via the same /_next/image URLs
+  // that next/image will request when the user turns the page. We construct the URL
+  // manually so the browser cache warms the exact optimised variant (not the raw
+  // Supabase URL, which is a different cache key). Width is computed from DPR so we
+  // warm the correct srcset entry.
+  useEffect(() => {
+    const adjacent = [pages[current - 1], pages[current + 1]]
+      .filter(Boolean)
+      .filter((p) => p.illustration_url)
+    if (!adjacent.length) return
+
+    const dpr = window.devicePixelRatio || 1
+    // The illustration renders at up to 672 CSS px (max-w-2xl container).
+    const needed = Math.round(672 * dpr)
+    const widths = [640, 750, 828, 1080, 1200, 1920, 2048, 3840]
+    const w = widths.find((b) => b >= needed) ?? 3840
+
+    adjacent.forEach((p) => {
+      const img = new window.Image()
+      img.src = `/_next/image?url=${encodeURIComponent(p.illustration_url)}&w=${w}&q=75`
+    })
+  }, [current, pages])
 
   const page = pages[current]
   if (!page) return null
@@ -94,11 +118,11 @@ export default function StoryReader({ title, pages }: Props) {
               className="touch-pan-y"
             >
               {isCover ? (
-                <CoverLayout title={title} url={page.illustration_url} alt={`Cover illustration for “${title}”`} />
+                <CoverLayout title={title} url={page.illustration_url} alt={`Cover illustration for “${title}”`} priority />
               ) : isEnd ? (
-                <EndLayout text={page.text_content} url={page.illustration_url} alt={`Closing illustration for “${title}”`} />
+                <EndLayout text={page.text_content} url={page.illustration_url} alt={`Closing illustration for “${title}”`} priority />
               ) : (
-                <StoryLayout text={page.text_content} url={page.illustration_url} alt={`Illustration for page ${page.page_number} of “${title}”`} />
+                <StoryLayout text={page.text_content} url={page.illustration_url} alt={`Illustration for page ${page.page_number} of “${title}”`} priority />
               )}
             </motion.div>
           </AnimatePresence>
@@ -119,7 +143,7 @@ export default function StoryReader({ title, pages }: Props) {
   )
 }
 
-function PageIllustration({ url, alt, className }: { url: string; alt: string; className?: string }) {
+function PageIllustration({ url, alt, className, priority }: { url: string; alt: string; className?: string; priority?: boolean }) {
   const [errored, setErrored] = useState(false)
   if (errored || !url) {
     return (
@@ -133,22 +157,32 @@ function PageIllustration({ url, alt, className }: { url: string; alt: string; c
       </div>
     )
   }
+  // Wrapper gives next/image a positioned, aspect-square context for `fill`.
+  // className (e.g. opacity-90 from EndLayout) is forwarded to the wrapper so
+  // the visual effect is identical to applying it directly on the <img>.
+  //
+  // sizes: the illustration lives inside max-w-2xl (672px) with px-4 sm:px-8
+  // padding on <main>. It hits the 672px cap at 672 + 2×32 = 736px viewport.
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={url}
-      alt={alt}
-      onError={() => setErrored(true)}
-      className={`w-full aspect-square object-cover ${className ?? ''}`}
-    />
+    <div className={`relative w-full aspect-square ${className ?? ''}`}>
+      <Image
+        src={url}
+        alt={alt}
+        fill
+        priority={priority}
+        onError={() => setErrored(true)}
+        className="object-cover"
+        sizes="(min-width: 736px) 672px, (min-width: 640px) calc(100vw - 64px), calc(100vw - 32px)"
+      />
+    </div>
   )
 }
 
-function CoverLayout({ title, url, alt }: { title: string; url: string; alt?: string }) {
+function CoverLayout({ title, url, alt, priority }: { title: string; url: string; alt?: string; priority?: boolean }) {
   return (
     <div className="rounded-xl overflow-hidden shadow-xl bg-night-soft">
       <div className="relative">
-        <PageIllustration url={url} alt={alt || `Cover illustration for “${title}”`} />
+        <PageIllustration url={url} alt={alt || `Cover illustration for ${title}`} priority={priority} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
           <div className="inline-flex items-center gap-2 mb-3 px-3 h-7 rounded-pill bg-white/15 backdrop-blur text-white text-[11px] font-semibold uppercase tracking-widest">
@@ -162,10 +196,10 @@ function CoverLayout({ title, url, alt }: { title: string; url: string; alt?: st
   )
 }
 
-function StoryLayout({ text, url, alt }: { text: string; url: string; alt?: string }) {
+function StoryLayout({ text, url, alt, priority }: { text: string; url: string; alt?: string; priority?: boolean }) {
   return (
     <article className="rounded-xl overflow-hidden bg-surface-raised text-ink shadow-xl" aria-live="polite">
-      <PageIllustration url={url} alt={alt || 'Story illustration'} />
+      <PageIllustration url={url} alt={alt || 'Story illustration'} priority={priority} />
       <div className="px-6 py-7 sm:px-10 sm:py-10 font-display text-[18px] sm:text-[19px] leading-[1.75] text-ink space-y-4 max-w-[60ch] mx-auto">
         {text.split('\n\n').map((para, i) => (
           <p key={i} className={i === 0 ? 'drop-cap' : ''}>{para}</p>
@@ -175,11 +209,11 @@ function StoryLayout({ text, url, alt }: { text: string; url: string; alt?: stri
   )
 }
 
-function EndLayout({ text, url, alt }: { text: string; url: string; alt?: string }) {
+function EndLayout({ text, url, alt, priority }: { text: string; url: string; alt?: string; priority?: boolean }) {
   const lines = text.split('\n').filter((l) => l.trim())
   return (
     <div className="rounded-xl overflow-hidden bg-night-soft text-white shadow-xl">
-      <PageIllustration url={url} alt={alt || 'Closing illustration'} className="opacity-90" />
+      <PageIllustration url={url} alt={alt || 'Closing illustration'} className="opacity-90" priority={priority} />
       <div className="px-6 py-10 text-center space-y-4">
         <p className="font-display text-4xl sm:text-5xl text-accent">{lines[0] || 'The End'}</p>
         {lines[1] && (
