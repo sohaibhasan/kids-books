@@ -102,7 +102,7 @@ Feature:  Kontext accepts `image_url` for character reference
 
 ### Google Nano Banana 2 (new, free)
 ```
-Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent
+Endpoint: https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent
 Auth:     x-goog-api-key: $GOOGLE_AI_KEY
 Format:   Inline image data in Gemini response
 Limit:    ~500 requests/day, no credit card required

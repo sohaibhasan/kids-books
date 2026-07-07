@@ -228,7 +228,7 @@ The outfit is the strongest consistency anchor — it's the most visually distin
 **Vercel (primary):** https://storybookstudio.org (legacy alias: https://kidsbooks-eight.vercel.app)
 - **Domain:** registered at Cloudflare Registrar. DNS records (apex `A 76.76.21.21`, `www CNAME cname.vercel-dns.com`) are **DNS only** (gray cloud) — Vercel handles SSL itself; proxying would cause redirect loops.
 - **Auto-deploy:** push to `main` → Vercel builds and promotes to production. Push to any other branch → preview deployment. (Connected via the Vercel GitHub App.)
-- **Manual fallback:** `~/.nvm/versions/node/v20.20.1/bin/node ~/.nvm/versions/node/v20.20.1/bin/vercel --prod --yes`
+- **Manual fallback:** `npx vercel --prod --yes` (with nvm Node on PATH; the Vercel CLI is not installed globally on this machine)
 - **Env vars (Production):**
   - AI: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `RECRAFT_API_KEY`, `FAL_KEY`, `GOOGLE_AI_KEY`, `HF_TOKEN`
   - Supabase: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
@@ -251,7 +251,7 @@ git push -u origin main
 
 ```bash
 # Run dev server (requires Node via nvm)
-export PATH="$HOME/.nvm/versions/node/v20.20.1/bin:$PATH"
+export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 npm run dev
 
 # Build

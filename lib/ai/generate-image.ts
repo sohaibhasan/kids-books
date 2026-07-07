@@ -305,11 +305,13 @@ async function generateWithFal(prompt: string): Promise<Buffer> {
 
 // ---------------------------------------------------------------------------
 // Google Gemini — free-tier image generation (~500/day, no billing)
-// Uses gemini-2.5-flash-image (or gemini-3.1-flash-image-preview as fallback).
+// Uses gemini-3.1-flash-image (GA). Google's recommended migration path for
+// the Imagen 4 endpoints discontinued Aug 17, 2026; we use the GA ID rather
+// than the -preview suffix since previews get retired after GA lands.
 // Response contains inline base64 image data.
 // ---------------------------------------------------------------------------
 
-const GOOGLE_IMAGE_MODEL = 'gemini-3.1-flash-image-preview'
+const GOOGLE_IMAGE_MODEL = 'gemini-3.1-flash-image'
 const GOOGLE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GOOGLE_IMAGE_MODEL}:generateContent`
 
 async function generateWithGoogle(prompt: string): Promise<Buffer> {
