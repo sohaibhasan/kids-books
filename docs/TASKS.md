@@ -120,10 +120,10 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [x] BUG-8 Error boundaries for reader + generating pages — Haiku, P1
 Add `app/read/[slug]/error.tsx` and `app/generating/[slug]/error.tsx` (client components, on-brand copy, "Try again" via `reset()`, link home). Follow existing design tokens (`bg-cream`, Fraunces heading, `Button` primitive). Acceptance: throwing inside `StoryReader` renders the boundary instead of a blank screen.
 
-### [ ] BUG-9 Companion name without companion type — Haiku, P2
+### [x] BUG-9 Companion name without companion type — Haiku, P2 — done 2026-07-08
 `StepSetting.tsx:34–44` / `StepReview.tsx:42–44`: a user can set `companion_name` with no companion selected → inconsistent form state. In `StepSetting`, clear `companion_name` when the last companion is deselected; in review, only show the name when a companion exists. Add shared `parseCompanions()` in `lib/utils.ts` replacing both comma-split sites. Acceptance: deselect companion → name field hidden and cleared.
 
-### [ ] BUG-10 Email edge cases — Haiku, P2
+### [x] BUG-10 Email edge cases — Haiku, P2 — done 2026-07-08
 (a) `StepReview.tsx:199–203` `maskEmail` assumes one `@` — guard malformed input (return as-is).
 (b) Keep the simple regex but add trailing-dot / consecutive-dot checks, shared between client (`WizardContainer.tsx:62`) and server (`app/api/stories/start/route.ts:123–125`) — export one `isValidEmail` from `lib/utils.ts`, import in both places.
 Acceptance: `a@@b.c`, `a@b.`, `a..b@c.d` rejected consistently client + server.

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { WizardFormSchema, parsePagesLenient, parseFormLenient } from '@/lib/validation'
+import { parseCompanions, isValidEmail } from '@/lib/utils'
 
 // A complete, realistic wizard payload that must pass.
 const VALID_BASE = {
@@ -222,5 +223,147 @@ describe('parseFormLenient', () => {
 
   it('throws on an array', () => {
     expect(() => parseFormLenient([{ child_name: 'bad' }])).toThrow()
+  })
+})
+
+// ── parseCompanions (BUG-9) ──────────────────────────────────────────────────
+
+describe('parseCompanions', () => {
+  it('splits a comma-separated string into an array', () => {
+    const result = parseCompanions('dragon, fox, owl')
+    expect(result).toEqual(['dragon', 'fox', 'owl'])
+  })
+
+  it('trims whitespace from each companion', () => {
+    const result = parseCompanions('  dragon  ,  fox  ,  owl  ')
+    expect(result).toEqual(['dragon', 'fox', 'owl'])
+  })
+
+  it('drops empty strings from multiple commas', () => {
+    const result = parseCompanions('dragon,,,fox')
+    expect(result).toEqual(['dragon', 'fox'])
+  })
+
+  it('returns empty array for null input', () => {
+    expect(parseCompanions(null)).toEqual([])
+  })
+
+  it('returns empty array for undefined input', () => {
+    expect(parseCompanions(undefined)).toEqual([])
+  })
+
+  it('returns empty array for empty string', () => {
+    expect(parseCompanions('')).toEqual([])
+  })
+
+  it('returns array with one item for single companion', () => {
+    const result = parseCompanions('dragon')
+    expect(result).toEqual(['dragon'])
+  })
+})
+
+// ── isValidEmail (BUG-10) ─────────────────────────────────────────────────────
+
+describe('isValidEmail', () => {
+  it('accepts a valid email', () => {
+    expect(isValidEmail('user@example.com')).toBe(true)
+  })
+
+  it('accepts an email with multiple domain parts', () => {
+    expect(isValidEmail('user@mail.example.co.uk')).toBe(true)
+  })
+
+  it('trims leading/trailing whitespace', () => {
+    expect(isValidEmail('  user@example.com  ')).toBe(true)
+  })
+
+  it('rejects email with no TLD', () => {
+    expect(isValidEmail('user@domain')).toBe(false)
+  })
+
+  it('rejects email with consecutive dots', () => {
+    expect(isValidEmail('user..name@example.com')).toBe(false)
+  })
+
+  it('rejects email with consecutive dots in domain', () => {
+    expect(isValidEmail('user@example..com')).toBe(false)
+  })
+
+  it('rejects domain part ending with dot', () => {
+    expect(isValidEmail('user@example.')).toBe(false)
+  })
+
+  it('rejects email with multiple @ symbols', () => {
+    expect(isValidEmail('user@@example.com')).toBe(false)
+  })
+
+  it('rejects email with multiple @ symbols (more than 2)', () => {
+    expect(isValidEmail('user@ex@ample@com')).toBe(false)
+  })
+
+  it('rejects email with no user part', () => {
+    expect(isValidEmail('@example.com')).toBe(false)
+  })
+
+  it('rejects empty string', () => {
+    expect(isValidEmail('')).toBe(false)
+  })
+
+  it('rejects whitespace-only string', () => {
+    expect(isValidEmail('   ')).toBe(false)
+  })
+
+  it('rejects email with spaces in user part', () => {
+    expect(isValidEmail('user name@example.com')).toBe(false)
+  })
+})
+
+// ── WizardFormSchema email validation (BUG-10 server-side) ────────────────────
+
+describe('WizardFormSchema email validation (server-side)', () => {
+  const VALID_BASE_FOR_EMAIL = {
+    child_name: 'Test',
+    child_age: 7,
+    child_pronouns: 'she/her',
+    genre: 'fantasy',
+    art_style: 'comic-book',
+    length: 'medium',
+    writing_style: 'lyrical-imaginative',
+    tone: 'adventurous',
+  }
+
+  it('rejects a@b. (domain ending with dot)', () => {
+    const result = WizardFormSchema.safeParse({
+      ...VALID_BASE_FOR_EMAIL,
+      email: 'a@b.',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a..b@c.d (consecutive dots in user)', () => {
+    const result = WizardFormSchema.safeParse({
+      ...VALID_BASE_FOR_EMAIL,
+      email: 'a..b@c.d',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a@@b.c (multiple @)', () => {
+    const result = WizardFormSchema.safeParse({
+      ...VALID_BASE_FOR_EMAIL,
+      email: 'a@@b.c',
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('accepts valid email after trimming', () => {
+    const result = WizardFormSchema.safeParse({
+      ...VALID_BASE_FOR_EMAIL,
+      email: '  a@b.co  ',
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.email).toBe('a@b.co')
+    }
   })
 })

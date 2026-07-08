@@ -4,6 +4,7 @@ import SelectCard from '@/components/ui/SelectCard'
 import Input from '@/components/ui/Input'
 import { WizardFormData } from '@/types'
 import { SETTINGS, COMPANIONS } from '@/lib/wizard-options'
+import { parseCompanions } from '@/lib/utils'
 import StepHeader from '../StepHeader'
 
 interface Props {
@@ -12,15 +13,19 @@ interface Props {
 }
 
 export default function StepSetting({ data, onChange }: Props) {
-  const companions: string[] = data.supporting_characters
-    ? data.supporting_characters.split(',').filter(Boolean)
-    : []
+  const companions = parseCompanions(data.supporting_characters)
 
   const toggleCompanion = (value: string) => {
     const updated = companions.includes(value)
       ? companions.filter((c) => c !== value)
       : [...companions, value]
-    onChange({ supporting_characters: updated.join(',') })
+    const newSupportingCharacters = updated.join(',')
+    // When deselecting the last companion, also clear companion_name
+    const updates: Partial<WizardFormData> = { supporting_characters: newSupportingCharacters }
+    if (updated.length === 0) {
+      updates.companion_name = ''
+    }
+    onChange(updates)
   }
 
   return (

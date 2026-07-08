@@ -21,6 +21,7 @@
 
 import { z } from 'zod'
 import type { WizardFormData } from '@/types'
+import { isValidEmail } from '@/lib/utils'
 
 // ── Enum schemas (union values mirror types/index.ts exactly) ─────────────────
 
@@ -168,7 +169,7 @@ export const WizardFormSchema = z.object({
   feature_opt_in: z.coerce.boolean().optional(),
 
   // email: trim first; treat empty string as absent; validate non-empty
-  // values with the same regex as the former isValidEmail() guard.
+  // values with isValidEmail() so client and server agree exactly.
   email: z.preprocess(
     (v): string | undefined => {
       if (typeof v !== 'string') return undefined
@@ -178,7 +179,7 @@ export const WizardFormSchema = z.object({
     z
       .string()
       .refine(
-        s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s),
+        isValidEmail,
         { message: 'invalid email' },
       )
       .optional(),

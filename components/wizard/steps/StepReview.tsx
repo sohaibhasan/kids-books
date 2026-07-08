@@ -3,6 +3,7 @@
 import { AlertTriangle, Check, Mail, Pencil, Sparkles } from 'lucide-react'
 import { WizardFormData } from '@/types'
 import { DEPTH_MODIFIERS, TONE_META, WRITING_STYLE_VOICES } from '@/lib/ai/writing-styles'
+import { parseCompanions, isValidEmail } from '@/lib/utils'
 import Input from '@/components/ui/Input'
 import StepHeader from '../StepHeader'
 
@@ -39,9 +40,8 @@ function MetaRow({ row, onJump }: { row: Row; onJump: (step: number) => void }) 
 
 export default function StepReview({ data, onJump, onChange }: Props) {
   const name = data.child_name || 'Your child'
-  const companions = data.supporting_characters
-    ? data.supporting_characters.split(',').filter(Boolean).join(', ')
-    : 'None'
+  const parsedCompanions = parseCompanions(data.supporting_characters)
+  const companions = parsedCompanions.length > 0 ? parsedCompanions.join(', ') : 'None'
 
   const appearance = [
     data.skin_tone && `${data.skin_tone} skin`,
@@ -64,6 +64,15 @@ export default function StepReview({ data, onJump, onChange }: Props) {
     { step: 6, label: 'Writing voice', value: data.writing_style ? WRITING_STYLE_VOICES[data.writing_style].label : '—' },
     { step: 6, label: 'Tone',          value: data.tone ? TONE_META[data.tone].label : '—' },
   ]
+
+  // Only render companion name if there are actual companions selected
+  if (parsedCompanions.length > 0 && data.companion_name) {
+    rows.push({
+      step: 4,
+      label: 'Companion\'s name',
+      value: data.companion_name,
+    })
+  }
 
   if (data.depth_modifiers && data.depth_modifiers.length > 0) {
     rows.push({
@@ -197,12 +206,11 @@ function EmailTradeoffStrip({ email }: { email: string | undefined }) {
 }
 
 function maskEmail(email: string): string {
-  const [user, domain] = email.trim().split('@')
-  if (!user || !domain) return email
+  const trimmed = email.trim()
+  const parts = trimmed.split('@')
+  if (parts.length !== 2) return trimmed
+  const [user, domain] = parts
+  if (!user || !domain) return trimmed
   if (user.length <= 1) return `${user}***@${domain}`
   return `${user[0]}***@${domain}`
-}
-
-function isValidEmail(s: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.trim())
 }

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
 import { WizardFormData } from '@/types'
+import { isValidEmail } from '@/lib/utils'
 import Stepper from '@/components/ui/Stepper'
 import Button from '@/components/ui/Button'
 import { ToastProvider, useToast } from '@/components/ui/Toast'
@@ -61,7 +62,7 @@ function canAdvance(step: number, data: WizardFormData): boolean {
   if (step === 8) {
     // Review — email is optional, but if present it must be valid.
     if (!data.email) return true
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())
+    return isValidEmail(data.email)
   }
   return true
 }
