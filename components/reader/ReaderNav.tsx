@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import { motion } from 'motion/react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Page {
@@ -20,6 +20,10 @@ interface Props {
   onNext: () => void
   atStart: boolean
   atEnd: boolean
+  /** Whether read-aloud is currently active. Hidden when undefined (not supported). */
+  speaking?: boolean
+  /** Called when the user taps the read-aloud button. */
+  onSpeakToggle?: () => void
 }
 
 export default function ReaderNav({
@@ -31,6 +35,8 @@ export default function ReaderNav({
   onNext,
   atStart,
   atEnd,
+  speaking,
+  onSpeakToggle,
 }: Props) {
   return (
     <nav
@@ -115,6 +121,26 @@ export default function ReaderNav({
         >
           <ChevronRight className="size-5" />
         </button>
+
+        {/* Read aloud (hidden when speechSynthesis is unsupported) */}
+        {onSpeakToggle && (
+          <>
+            <span aria-hidden className="w-px h-5 bg-white/15 mx-0.5" />
+            <button
+              type="button"
+              aria-label={speaking ? 'Stop reading aloud' : 'Read this page aloud'}
+              aria-pressed={speaking ? 'true' : 'false'}
+              onClick={onSpeakToggle}
+              className={cn(
+                'inline-flex size-10 items-center justify-center rounded-pill transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+                speaking ? 'text-accent bg-white/10 hover:bg-white/15' : 'text-white hover:bg-white/15',
+              )}
+            >
+              {speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+            </button>
+          </>
+        )}
       </div>
     </nav>
   )

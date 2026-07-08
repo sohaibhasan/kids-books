@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
@@ -10,6 +10,7 @@ import { readerPageVariants } from '@/lib/motion'
 import ReaderChrome from './ReaderChrome'
 import ReaderNav from './ReaderNav'
 import SharePopover from './SharePopover'
+import { useReadAloud } from './useReadAloud'
 
 interface Page {
   page_number: number
@@ -30,13 +31,59 @@ export default function StoryReader({ title, pages }: Props) {
   const [direction, setDirection] = useState(1)
   const reduce = useReducedMotion()
 
+  // Read-aloud "bedtime mode": while active, each finished utterance advances
+  // to the next page and keeps reading. Manual navigation exits the mode.
+  // Refs (not state) so goTo — captured in stale closures by the keyboard
+  // effect and drag handlers — always sees the live values.
+  const { supported: speechSupported, speaking, speak, stop } = useReadAloud()
+  const readAloudRef = useRef(false)
+  const autoAdvanceRef = useRef(false)
+
   const goTo = (idx: number) => {
     const target = Math.max(0, Math.min(idx, pages.length - 1))
+    // Any human-initiated page turn stops read-aloud; auto-advance doesn't.
+    if (!autoAdvanceRef.current && readAloudRef.current) {
+      readAloudRef.current = false
+      stop()
+    }
     setDirection(target > current ? 1 : -1)
     setCurrent(target)
   }
   const next = () => goTo(current + 1)
   const prev = () => goTo(current - 1)
+
+  const pageSpeechText = (p: Page) => (p.type === 'cover' ? title : p.text_content)
+
+  const speakPage = (idx: number) => {
+    const p = pages[idx]
+    if (!p) return
+    readAloudRef.current = true
+    speak(pageSpeechText(p), () => {
+      // Utterance finished naturally. Chain to the next page unless the mode
+      // was exited (stop() cancels the utterance, so onEnd won't fire then —
+      // this guard covers edge-ordering anyway).
+      if (!readAloudRef.current) return
+      const nextIdx = idx + 1
+      if (nextIdx < pages.length) {
+        autoAdvanceRef.current = true
+        goTo(nextIdx)
+        autoAdvanceRef.current = false
+        speakPage(nextIdx)
+      } else {
+        readAloudRef.current = false
+      }
+    })
+  }
+
+  const handleSpeakToggle = () => {
+    if (readAloudRef.current || speaking) {
+      readAloudRef.current = false
+      stop()
+    } else {
+      // iOS requires the first speak() inside a user gesture — this tap is it.
+      speakPage(current)
+    }
+  }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -138,6 +185,8 @@ export default function StoryReader({ title, pages }: Props) {
         onNext={next}
         atStart={current === 0}
         atEnd={current === pages.length - 1}
+        speaking={speaking}
+        onSpeakToggle={speechSupported ? handleSpeakToggle : undefined}
       />
     </div>
   )
