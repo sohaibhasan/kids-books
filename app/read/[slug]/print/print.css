@@ -1,0 +1,68 @@
+/*
+ * print.css — imported exclusively by app/read/[slug]/print/page.tsx
+ *
+ * Handles @page rules (which Tailwind cannot express) and any print-media
+ * overrides that are cleaner as plain CSS than as print: utility variants.
+ */
+
+/* Standard letter sheet with comfortable margins */
+@page {
+  margin: 0.75in;
+  size: letter portrait;
+}
+
+/*
+ * Screen: visual separation between pages so the user can see how the PDF
+ * will look before the print dialog opens.
+ */
+.print-page {
+  border-bottom: 1px solid #e8e1d5;
+}
+
+.print-page:last-of-type {
+  border-bottom: none;
+}
+
+/*
+ * Print: one story page per printed sheet.
+ * break-after:page is the modern property; page-break-after is the alias
+ * that older Chromium / Safari versions still need.
+ */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-page {
+    page-break-after: always;
+    break-after: page;
+    break-inside: avoid;
+    border-bottom: none;
+    width: 100%;
+    /* Reset any screen-only flex height */
+    min-height: 0;
+  }
+
+  .print-page:last-of-type {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /*
+   * Images: never wider than the printable area; never taller than ~5.5 in so
+   * there is always room for the text below on the same sheet.
+   */
+  .print-img {
+    max-width: 100%;
+    max-height: 5.5in;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

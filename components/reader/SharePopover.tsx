@@ -30,7 +30,16 @@ export default function SharePopover({ title }: Props) {
     }
   }
 
-  const print = () => window.print()
+  // Derive the slug from the current URL (/read/<slug>).  SharePopover only
+  // receives `title`, not `slug`, and we may not edit StoryReader to pass it
+  // down — so we read window.location.pathname which on /read/[slug] is
+  // reliably /read/<slug>.
+  const openPrint = () => {
+    const parts = window.location.pathname.split('/')
+    // pathname: '' / 'read' / '<slug>'   (index 0 / 1 / 2)
+    const slug = parts[2] ?? ''
+    window.open(`/read/${slug}/print`, '_blank', 'noopener')
+  }
 
   return (
     <Popover.Root>
@@ -63,11 +72,11 @@ export default function SharePopover({ title }: Props) {
             </button>
           )}
           <button
-            onClick={print}
+            onClick={openPrint}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm text-ink hover:bg-brand-tint hover:text-brand-deep transition-colors"
           >
             <Printer className="size-4" />
-            Print
+            Save as PDF / Print
           </button>
         </Popover.Content>
       </Popover.Portal>
