@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { waitUntil } from '@vercel/functions'
 import { findStaleJobs, findExhaustedJobs } from '@/lib/jobs/claim'
 import { failStory } from '@/lib/jobs/fail-story'
+import { supabase } from '@/lib/supabase'
+import { sendSuccessIfNeeded } from '@/lib/jobs/run-story-job'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
@@ -67,10 +69,53 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  // Phase 3 — retry unsent success emails for recently completed stories.
+  // DEPLOYMENT NOTE: this phase requires migration 0008_notify_attempts.sql to
+  // be applied to Supabase first. If the column does not yet exist the query
+  // will return an error; we catch it, log once, and skip the phase so the
+  // rest of the sweep is unaffected.
+  let emailRetried = 0
+  try {
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    const { data: emailRows, error: emailQueryErr } = await supabase
+      .from('stories')
+      .select('slug, notify_attempts')
+      .eq('status', 'complete')
+      .not('email', 'is', null)
+      .is('notify_email_sent_at', null)
+      .lt('notify_attempts', 5)
+      .lt('last_progress_at', tenMinAgo)
+      .order('last_progress_at', { ascending: true })
+      .limit(10)
+
+    if (emailQueryErr) {
+      // Most likely cause: migration 0008 not yet applied. Log and skip.
+      console.warn('[cron/resume-stories] email-retry query failed (migration 0008 pending?)', emailQueryErr)
+    } else {
+      for (const row of (emailRows ?? []) as Array<{ slug: string; notify_attempts: number }>) {
+        try {
+          // Increment notify_attempts before attempting the send so that a
+          // crash or timeout during the send still consumes an attempt (cap: 5).
+          await supabase
+            .from('stories')
+            .update({ notify_attempts: (row.notify_attempts ?? 0) + 1 })
+            .eq('slug', row.slug)
+          await sendSuccessIfNeeded(row.slug)
+          emailRetried++
+        } catch (err) {
+          console.error(`[cron/resume-stories ${row.slug}] email retry threw`, err)
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[cron/resume-stories] email-retry phase threw', err)
+  }
+
   return NextResponse.json({
     picked_up: stale.length,
     slugs: stale,
     terminally_failed: failed.length,
     failed_slugs: failed,
+    email_retried: emailRetried,
   })
 }

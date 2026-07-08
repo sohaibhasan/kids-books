@@ -485,7 +485,7 @@ async function imageExists(slug: string, pageNumber: number): Promise<boolean> {
   return !!(data && data.length > 0)
 }
 
-async function sendSuccessIfNeeded(slug: string): Promise<void> {
+export async function sendSuccessIfNeeded(slug: string): Promise<void> {
   const fresh = await getStoryRow(slug)
   if (!fresh) return
   if (!fresh.email || fresh.notify_email_sent_at) return
