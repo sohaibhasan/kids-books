@@ -9,6 +9,7 @@ import Button from '@/components/ui/Button'
 import Progress from '@/components/ui/Progress'
 import { thumbReveal } from '@/lib/motion'
 import { updateMyStoryTitle } from '@/lib/my-stories'
+import { POLL_MS_IMAGES, POLL_MS_TEXT, POLL_MS_SLOW, SLOW_AFTER_MS } from '@/lib/config'
 
 interface StatusPage {
   page_number: number
@@ -48,15 +49,6 @@ const ROTATING_COPY_IMAGES = [
   'Painting the background…',
   'A touch of magic…',
 ]
-
-// Adaptive polling intervals:
-//   generating_images → 3 s  (fast feedback as pages complete)
-//   pending / generating_text → 5 s  (text gen is slow; no point hammering)
-//   after 120 s total elapsed → 8 s  (tab left open; be conservative)
-const POLL_MS_IMAGES = 3_000
-const POLL_MS_TEXT = 5_000
-const POLL_MS_SLOW = 8_000
-const SLOW_AFTER_MS = 120_000
 
 export default function GeneratingPage() {
   const { slug } = useParams<{ slug: string }>()

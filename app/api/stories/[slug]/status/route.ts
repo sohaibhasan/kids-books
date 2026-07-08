@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getExpectedTotal } from '@/lib/ai/generate-story'
 import type { PageStatus } from '@/lib/jobs/claim'
 import { parsePagesLenient, parseFormLenient } from '@/lib/validation'
-
-const BUCKET = 'story-images'
+import { STORY_IMAGES_BUCKET } from '@/lib/config'
+import { apiError, apiOk } from '@/lib/api'
 
 /**
  * Rich status used by /generating to drive its polling UI. Returns:
@@ -29,7 +29,7 @@ export async function GET(
     .maybeSingle()
 
   if (error || !data) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    return apiError(404, 'NOT_FOUND', 'not_found')
   }
 
   const pages = parsePagesLenient(data.pages)
@@ -61,7 +61,7 @@ export async function GET(
     const ps = psByNum.get(p.page_number)
     const state = ps?.state ?? 'pending'
     const filename = `${slug}/page-${String(p.page_number).padStart(2, '0')}.png`
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename)
+    const { data: pub } = supabase.storage.from(STORY_IMAGES_BUCKET).getPublicUrl(filename)
     return {
       page_number: p.page_number,
       state,
@@ -84,7 +84,7 @@ export async function GET(
     refunded = !!refundRow
   }
 
-  return NextResponse.json(
+  return apiOk(
     {
       title: data.title,
       status: data.status,

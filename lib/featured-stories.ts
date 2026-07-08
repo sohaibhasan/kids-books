@@ -2,8 +2,7 @@ import { cookies } from 'next/headers'
 import { supabase } from '@/lib/supabase'
 import { Genre, WizardFormData } from '@/types'
 import { GENRES, LESSONS } from '@/lib/wizard-options'
-
-const BUCKET = 'story-images'
+import { STORY_IMAGES_BUCKET } from '@/lib/config'
 const COOKIE_NAME = 'kb_showcase'
 const CANDIDATE_QUERY_LIMIT = 60
 const SAMPLE_COUNT = 4
@@ -67,7 +66,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function coverUrlFor(slug: string): string {
-  const { data } = supabase.storage.from(BUCKET).getPublicUrl(`${slug}/page-00.png`)
+  const { data } = supabase.storage.from(STORY_IMAGES_BUCKET).getPublicUrl(`${slug}/page-00.png`)
   return data.publicUrl
 }
 

@@ -4,10 +4,9 @@ import { parsePagesLenient } from '@/lib/validation'
 import type { PageStatus } from '@/lib/jobs/claim'
 import AutoPrint from './AutoPrint'
 import './print.css'
+import { STORY_IMAGES_BUCKET } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
-
-const BUCKET = 'story-images'
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
@@ -39,7 +38,7 @@ export default async function PrintPage({ params }: { params: Promise<{ slug: st
 
   const pages = parsePagesLenient(story.pages).map(p => {
     const filename = `${slug}/page-${String(p.page_number).padStart(2, '0')}.png`
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(filename)
+    const { data } = supabase.storage.from(STORY_IMAGES_BUCKET).getPublicUrl(filename)
     const version = psByNum.get(p.page_number)?.image_version
     const illustration_url = version ? `${data.publicUrl}?v=${version}` : data.publicUrl
     return { ...p, illustration_url }

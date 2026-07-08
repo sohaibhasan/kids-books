@@ -9,13 +9,14 @@ import { claimStory, heartbeat, getStoryRow, type PageStatus, type StoryRow } fr
 import { failStory } from './fail-story'
 import { parseFormLenient, parsePagesLenient, type StoryPage } from '@/lib/validation'
 import { ArtStyle, WizardFormData } from '@/types'
-
-const BUCKET = 'story-images'
-const SOFT_DEADLINE_MS = 240_000          // leave headroom under the 300s function cap
-const MAX_TRANSIENT_RETRIES = 4
-const MAX_REWRITES = 4
-const MAX_ATTEMPTS_PER_PAGE = 8           // total cap across transient + rewrites
-const HEARTBEAT_EVERY_MS = 25_000
+import {
+  STORY_IMAGES_BUCKET,
+  SOFT_DEADLINE_MS,
+  MAX_TRANSIENT_RETRIES,
+  MAX_REWRITES,
+  MAX_ATTEMPTS_PER_PAGE,
+  HEARTBEAT_EVERY_MS,
+} from '@/lib/config'
 
 type JobResult =
   | { finalStatus: 'complete'; reason?: undefined }
@@ -338,7 +339,7 @@ export async function generatePage(
     try {
       const buffer = await generateImage(currentPrompt, artStyle, provider)
       const { error: uploadError } = await supabase.storage
-        .from(BUCKET)
+        .from(STORY_IMAGES_BUCKET)
         .upload(filename, buffer, { contentType: 'image/png', upsert: true })
       if (uploadError) throw uploadError
       status.state = 'done'
@@ -468,7 +469,7 @@ async function persistPageStatus(slug: string, map: Map<number, PageStatus>): Pr
 
 async function imageExists(slug: string, pageNumber: number): Promise<boolean> {
   const filename = `page-${String(pageNumber).padStart(2, '0')}.png`
-  const { data } = await supabase.storage.from(BUCKET).list(slug, { search: filename })
+  const { data } = await supabase.storage.from(STORY_IMAGES_BUCKET).list(slug, { search: filename })
   return !!(data && data.length > 0)
 }
 
@@ -478,7 +479,7 @@ export async function sendSuccessIfNeeded(slug: string): Promise<void> {
   if (!fresh.email || fresh.notify_email_sent_at) return
   try {
     const { data: cover } = supabase.storage
-      .from(BUCKET)
+      .from(STORY_IMAGES_BUCKET)
       .getPublicUrl(`${slug}/page-00.png`)
     const form = parseFormLenient(fresh.form)
     const result = await sendStorySuccessEmail({

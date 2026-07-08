@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { FREE_GLOBAL_DAILY_DEFAULT } from './config'
 
 export type Entitlement =
   | { kind: 'free'; balance: 0 }
@@ -11,7 +12,7 @@ export const PACKS: Record<string, { credits: number; priceEnv: string; label: s
   large: { credits: 10, priceEnv: 'STRIPE_PRICE_PACK_10', label: '10 stories', price: '$15' },
 }
 
-const FREE_GLOBAL_DAILY = Number(process.env.FREE_STORIES_PER_DAY_GLOBAL ?? 200)
+const FREE_GLOBAL_DAILY = Number(process.env.FREE_STORIES_PER_DAY_GLOBAL ?? FREE_GLOBAL_DAILY_DEFAULT)
 
 /**
  * Has this device (or its fallback hash) used its free allowance?

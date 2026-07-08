@@ -1,16 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getOrSetDeviceId } from '@/lib/identity'
 import { generatePage, resolveImageContext } from '@/lib/jobs/run-story-job'
 import type { PageStatus } from '@/lib/jobs/claim'
 import { parseFormLenient, parsePagesLenient } from '@/lib/validation'
+import { STORY_IMAGES_BUCKET, SOFT_DEADLINE_MS } from '@/lib/config'
+import { apiError, apiOk } from '@/lib/api'
 
 export const maxDuration = 300
-
-const BUCKET = 'story-images'
-// Leave headroom under the 300s function cap, matching the background job's
-// soft deadline. generatePage stops looping once this elapses.
-const REGEN_DEADLINE_MS = 240_000
 
 /** Postgres "undefined column" (migration 0009 not applied yet) detection. */
 function isUndefinedColumn(err: { code?: string; message?: string } | null): boolean {
@@ -55,7 +52,7 @@ export async function POST(
 
   const pageNumber = Number(n)
   if (!Number.isInteger(pageNumber)) {
-    return NextResponse.json({ error: 'invalid page number' }, { status: 400 })
+    return apiError(400, 'VALIDATION_ERROR', 'invalid page number')
   }
 
   // 1. Load the story row.
@@ -65,16 +62,16 @@ export async function POST(
     .eq('slug', slug)
     .maybeSingle()
   if (loadErr || !row) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+    return apiError(404, 'NOT_FOUND', 'not_found')
   }
 
   // 2. Ownership + state gate.
   const { deviceId } = await getOrSetDeviceId()
   if (!row.device_id || deviceId !== row.device_id) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+    return apiError(403, 'FORBIDDEN', 'forbidden')
   }
   if (row.status !== 'complete') {
-    return NextResponse.json({ error: 'story is not finished yet' }, { status: 409 })
+    return apiError(409, 'CONFLICT', 'story is not finished yet')
   }
 
   // 4. Validate the page exists + has a scene to regenerate FROM. Done before
@@ -82,10 +79,10 @@ export async function POST(
   const pages = parsePagesLenient(row.pages)
   const page = pages.find(p => p.page_number === pageNumber)
   if (!page) {
-    return NextResponse.json({ error: 'page not found' }, { status: 404 })
+    return apiError(404, 'NOT_FOUND', 'page not found')
   }
   if (!page.scene_description || !page.scene_description.trim()) {
-    return NextResponse.json({ error: 'page has no scene to regenerate' }, { status: 400 })
+    return apiError(400, 'VALIDATION_ERROR', 'page has no scene to regenerate')
   }
 
   // 3. Budget: read → check → optimistic decrement. Tolerate the column not
@@ -98,13 +95,13 @@ export async function POST(
   if (budgetErr) {
     if (isUndefinedColumn(budgetErr)) {
       console.error(`[regenerate ${slug}] regens_remaining column missing`, budgetErr)
-      return NextResponse.json({ error: 'regeneration not available yet' }, { status: 503 })
+      return apiError(503, 'UNAVAILABLE', 'regeneration not available yet')
     }
-    return NextResponse.json({ error: 'ledger error' }, { status: 500 })
+    return apiError(500, 'LEDGER_ERROR', 'ledger error')
   }
   const regensRemaining = (budgetRow?.regens_remaining as number | undefined) ?? 0
   if (regensRemaining <= 0) {
-    return NextResponse.json({ error: 'No regenerations left for this story' }, { status: 429 })
+    return apiError(429, 'NO_REGENS', 'No regenerations left for this story')
   }
 
   // Optimistic decrement guarded by regens_remaining > 0 so we don't dip below
@@ -119,13 +116,13 @@ export async function POST(
   if (decErr) {
     if (isUndefinedColumn(decErr)) {
       console.error(`[regenerate ${slug}] regens_remaining column missing`, decErr)
-      return NextResponse.json({ error: 'regeneration not available yet' }, { status: 503 })
+      return apiError(503, 'UNAVAILABLE', 'regeneration not available yet')
     }
-    return NextResponse.json({ error: 'ledger error' }, { status: 500 })
+    return apiError(500, 'LEDGER_ERROR', 'ledger error')
   }
   if (!decRow) {
     // Lost the race for the last regen.
-    return NextResponse.json({ error: 'No regenerations left for this story' }, { status: 429 })
+    return apiError(429, 'NO_REGENS', 'No regenerations left for this story')
   }
 
   // 5. Run the regeneration inline. Fresh status entry (attempts reset). Because
@@ -157,7 +154,7 @@ export async function POST(
         characterSheet,
         stylePrefix,
         status,
-        deadlineHit: () => Date.now() - requestStart > REGEN_DEADLINE_MS,
+        deadlineHit: () => Date.now() - requestStart > SOFT_DEADLINE_MS,
         beat: async () => {},        // not the background job — never heartbeat
         onDeadline: () => {},        // no-op; a deadline surfaces as !result.ok below
       },
@@ -172,7 +169,7 @@ export async function POST(
     await refundRegen(slug)
     const message = status.last_error || result.fatal || 'could not regenerate this page'
     console.error(`[regenerate ${slug} page ${pageNumber}] failed: ${message}`)
-    return NextResponse.json({ error: 'Could not redraw this page. Please try again.' }, { status: 502 })
+    return apiError(502, 'GENERATION_FAILED', 'Could not redraw this page. Please try again.')
   }
 
   // 6. Success — bump the per-page image_version and merge the fresh status
@@ -207,6 +204,6 @@ export async function POST(
   }
 
   const filename = `${slug}/page-${String(pageNumber).padStart(2, '0')}.png`
-  const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename)
-  return NextResponse.json({ ok: true, url: `${pub.publicUrl}?v=${version}` })
+  const { data: pub } = supabase.storage.from(STORY_IMAGES_BUCKET).getPublicUrl(filename)
+  return apiOk({ ok: true, url: `${pub.publicUrl}?v=${version}` })
 }

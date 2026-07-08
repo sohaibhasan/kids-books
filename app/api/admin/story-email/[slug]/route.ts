@@ -4,10 +4,9 @@ import { getStoryRow } from '@/lib/jobs/claim'
 import { sendStorySuccessEmail } from '@/lib/jobs/emails'
 import { maybeAlertEmailFailure } from '@/lib/alerts'
 import { WizardFormData } from '@/types'
+import { STORY_IMAGES_BUCKET } from '@/lib/config'
 
 export const dynamic = 'force-dynamic'
-
-const BUCKET = 'story-images'
 
 /**
  * Admin inspect + force-resend for a story's "ready" email.
@@ -77,7 +76,7 @@ export async function POST(
     )
   }
 
-  const { data: cover } = supabase.storage.from(BUCKET).getPublicUrl(`${slug}/page-00.png`)
+  const { data: cover } = supabase.storage.from(STORY_IMAGES_BUCKET).getPublicUrl(`${slug}/page-00.png`)
   const form = parseForm(row.form)
   const result = await sendStorySuccessEmail({
     to: row.email,
