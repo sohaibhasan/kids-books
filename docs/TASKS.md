@@ -68,7 +68,7 @@ Acceptance: payload size drops; page still flips to reader within a few seconds 
 ### [x] FEAT-1 "My stories" device library — Sonnet, P0 — done 2026-07-07
 No way to find a story again without the URL. On successful enqueue (`WizardContainer` after `POST /api/stories/start` returns `{slug}`), append `{slug, child_name, created_at}` to localStorage key `kb_my_stories`; on the generating page's completion poll, patch in the real title. New route `app/stories/page.tsx` (client) listing entries with cover thumbnail (`page-00.png` public URL pattern from `lib/jobs/run-story-job.ts:288–290`), linking to `/read/[slug]`. Link from `components/marketing/Header.tsx` and the reader chrome. Acceptance: create story → appears in library; clearing localStorage empties it (acceptable in the no-accounts model); empty state has a CTA to the wizard.
 
-### [ ] FEAT-2 Wizard draft autosave — Sonnet, P1
+### [x] FEAT-2 Wizard draft autosave — Sonnet, P1 — done 2026-07-07
 Wizard state dies on refresh (sessionStorage is only used for the post-Stripe resume, `WizardContainer.tsx:103–105`). Debounced (~500ms) save of `{step, data}` to localStorage `kb_wizard_draft`; on mount, if a draft exists and differs from defaults, show a dismissible "Resume where you left off?" bar (restore vs. start fresh). Clear the draft on successful submit. Must not interfere with the `?paid=1` sessionStorage resume path. Acceptance: fill 3 steps → refresh → resume restores step + data; submit clears draft.
 
 ### [ ] FEAT-3 ⚠️ Per-page regenerate (storyboard-lite) — Opus, P1 (after HARD-2)
@@ -80,7 +80,7 @@ The Phase 2b flagship. New endpoint `POST /api/stories/[slug]/pages/[n]/regenera
 
 Reader UI: small "Regenerate this illustration" affordance behind an owner check (device cookie), spinner state driven by the status endpoint. Acceptance: regen replaces exactly one image; budget decrements; non-owner devices never see the button; story stays `complete` throughout.
 
-### [ ] FEAT-4 Read-aloud — Sonnet, P1
+### [x] FEAT-4 Read-aloud — Sonnet, P1 — done 2026-07-07
 Web Speech API (`speechSynthesis`) button in the reader: play/pause per page, auto-advance page when the utterance ends (toggleable). Child-friendly rate (~0.95), prefer an `en` voice; hide the button when `speechSynthesis` is unavailable; stop speech on page change/unmount. Note: iOS requires a user-gesture start. Acceptance: works in Chrome + Safari iOS; no orphaned speech after navigating away.
 
 ### [ ] FEAT-5 Print/PDF export polish — Sonnet, P2
@@ -105,7 +105,7 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [x] BUG-3 Timeout the Claude calls — Sonnet, P0 — done 2026-07-07
 `lib/ai/generate-story.ts:195` (stream) and `lib/ai/sanitize-prompt.ts` have no timeout; a hung call eats the whole 240s job budget before the sweeper can help. The Anthropic SDK accepts a per-request `timeout` — set ~120s on story gen and ~30s on rewrites; ensure the timeout error propagates so the catch at `run-story-job.ts:253` hands off to cron. Acceptance: simulated hang (temporarily set timeout to 1ms) results in `in_progress_handed_off`, not a silent 240s stall.
 
-### [ ] BUG-4 Retry unsent success emails from the sweeper — Sonnet, P1
+### [x] BUG-4 Retry unsent success emails from the sweeper — Sonnet, P1 — done 2026-07-07 (operator: apply migration 0008 in Supabase)
 `run-story-job.ts:283–313`: if the success email fails, `notify_email_sent_at` stays null by design, but nothing ever retries — the admin endpoint is manual. In `/api/cron/resume-stories` (runs every 2 min via `.github/workflows/cron-resume-stories.yml`), also query `status='complete' AND email IS NOT NULL AND notify_email_sent_at IS NULL AND last_progress_at < now()-'10 min'` and call the existing send path (export `sendSuccessIfNeeded`). Cap retries (small migration adding `notify_attempts` if needed). Acceptance: force a send failure (bad RESEND key in dev) → next sweep retries; success stamps the timestamp.
 
 ### [x] BUG-5 `?paid=1` resume fails silently — Sonnet, P1
@@ -180,7 +180,7 @@ CLAUDE.md documents deleted routes (`POST /api/stories`, SSE `GET /api/stories/[
 ### [x] CTX-3 Add a README.md — Haiku, P1
 Repo has none. Short: what the product is, live URL, stack table (condensed from CLAUDE.md), local dev (nvm Node 20, `npm run dev`, `.env.example`), pointers to CLAUDE.md (agent docs) and docs/TASKS.md (backlog). Acceptance: a newcomer can boot dev from the README alone.
 
-### [ ] CTX-4 Agent-efficacy upgrades to `.claude/` + CLAUDE.md — Sonnet, P1
+### [x] CTX-4 Agent-efficacy upgrades to `.claude/` + CLAUDE.md — Sonnet, P1 — done 2026-07-07
 (a) Add a "Working on this repo" section to CLAUDE.md: build/lint/test commands; a "money-path files require human review" list (`lib/credits.ts`, `app/api/stripe/webhook/route.ts`, `app/api/checkout/route.ts`, `app/api/stories/start/route.ts`); the "every bug fix adds a vitest regression test" rule; pointer to docs/TASKS.md and its delegation rubric.
 (b) Create checked-in `.claude/` project skills for two recurring chores: `new-migration` (next number in `supabase/migrations/`, naming convention, apply command) and `deploy-check` (build + lint + grep for stray console.logs + confirm no `.env` values in the diff).
 (c) Fold the `AGENTS.md` Vercel notes into CLAUDE.md or reference them explicitly.

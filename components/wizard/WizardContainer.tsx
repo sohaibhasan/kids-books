@@ -12,6 +12,7 @@ import { ToastProvider, useToast } from '@/components/ui/Toast'
 import { stepVariants } from '@/lib/motion'
 import PaywallModal, { PaywallPack } from '@/components/paywall/PaywallModal'
 import { addMyStory } from '@/lib/my-stories'
+import { clearWizardDraft, readWizardDraft, saveWizardDraft, type WizardDraft } from '@/lib/wizard-draft'
 import StepChild from './steps/StepChild'
 import StepGenre from './steps/StepGenre'
 import StepTheme from './steps/StepTheme'
@@ -78,6 +79,7 @@ function WizardInner() {
   const [paywall, setPaywall] = useState<{ open: boolean; packs: PaywallPack[] }>({ open: false, packs: [] })
   const [direction, setDirection] = useState(1)
   const resumeFiredRef = useRef(false)
+  const [draftOffer, setDraftOffer] = useState<WizardDraft | null>(null)
 
   const update = (fields: Partial<WizardFormData>) => setData((prev) => ({ ...prev, ...fields }))
 
@@ -113,6 +115,7 @@ function WizardInner() {
       }
       const { slug } = await res.json()
       sessionStorage.removeItem(RESUME_KEY)
+      clearWizardDraft()
       addMyStory({ slug, title: null, child_name: form.child_name, created_at: new Date().toISOString() })
       router.push(`/generating/${slug}`)
     } catch (err) {
@@ -188,6 +191,41 @@ function WizardInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Offer to restore a saved draft on mount. Skipped entirely when arriving
+  // from Stripe (?paid=1) or a magic link (?reclaimed=1) — those flows own the
+  // restore path via sessionStorage. localStorage is read inside a timeout
+  // callback (not synchronously in the effect) so the SSR'd markup matches the
+  // first client render and the set-state-in-effect lint rule stays happy.
+  useEffect(() => {
+    if (searchParams.get('paid') === '1' || searchParams.get('reclaimed') === '1') return
+    const t = setTimeout(() => {
+      const draft = readWizardDraft()
+      if (draft && draft.data.child_name.trim() !== '') setDraftOffer(draft)
+    }, 0)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Debounced draft autosave. Pristine state (nothing typed, still on step 1)
+  // is never saved, so fresh visitors don't accumulate empty drafts.
+  useEffect(() => {
+    if (step === 1 && data.child_name.trim() === '') return
+    const t = setTimeout(() => saveWizardDraft(step, data), 500)
+    return () => clearTimeout(t)
+  }, [step, data])
+
+  const resumeDraft = () => {
+    if (!draftOffer) return
+    setData(draftOffer.data)
+    goTo(draftOffer.step)
+    setDraftOffer(null)
+  }
+
+  const discardDraft = () => {
+    clearWizardDraft()
+    setDraftOffer(null)
+  }
+
   const stepContent = (() => {
     switch (step) {
       case 1: return <StepChild data={data} onChange={update} />
@@ -230,6 +268,21 @@ function WizardInner() {
       {/* Card */}
       <main className="flex-1">
         <div className="mx-auto max-w-3xl lg:max-w-6xl px-5 sm:px-8 py-8 md:py-12">
+          {draftOffer && (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface-raised px-5 py-4 shadow-sm">
+              <p className="text-sm text-ink-soft">
+                Resume where you left off? You have a saved draft
+                {draftOffer.data.child_name.trim() ? (
+                  <> for <span className="font-medium text-ink">{draftOffer.data.child_name.trim()}</span></>
+                ) : null}
+                .
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={resumeDraft}>Resume</Button>
+                <Button variant="ghost" onClick={discardDraft}>Start fresh</Button>
+              </div>
+            </div>
+          )}
           <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8 lg:items-start">
             <div className="bg-surface-raised rounded-xl shadow-md p-5 sm:p-8 md:p-10">
               <AnimatePresence mode="wait" custom={direction} initial={false}>
