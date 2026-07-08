@@ -320,6 +320,46 @@ npm run dev
 npm run build
 ```
 
+## Working on this repo
+
+### Commands
+
+Always prefix with the nvm PATH export so Node is on PATH:
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
+npm run build   # must pass before every commit
+npm run lint    # must pass before every commit
+npm test        # runs vitest; must pass before every commit
+npm run dev     # local dev server
+```
+
+### Verification bar
+
+Every change must pass `npm run build`, `npm run lint`, and `npm test` before commit. Every bug fix must add a vitest regression test under `tests/` (see HARD-8 in `docs/TASKS.md` for the test infrastructure).
+
+### Money-path review rule
+
+Changes to any of these files require human review before merging — do not self-merge to `main`:
+
+- `lib/credits.ts`
+- `app/api/stripe/webhook/route.ts`
+- `app/api/checkout/route.ts`
+- `app/api/stories/start/route.ts`
+
+Pushes to `main` auto-deploy to production (real money, real users). Use a preview branch and validate end-to-end before merging anything on these paths.
+
+### Delegation
+
+The prioritized backlog with per-task model recommendations (Opus / Sonnet / Haiku) and acceptance criteria lives in `docs/TASKS.md`. Pick work from there unless directed otherwise.
+
+### Code conventions
+
+- Straight quotes only (`'` and `"`, never `'` / `"` / `'` / `"`).
+- Match the style of the file being edited (indentation, import order, naming).
+- Design tokens live in `app/globals.css` — use `bg-surface` not `bg-cream`; add new tokens there so they become Tailwind utilities automatically.
+- Shared wizard option arrays live in `lib/wizard-options.ts` — do not re-export them from step files or duplicate them in `StoryPreview.tsx`.
+
 ## Development Phases
 
 - **Phase 1 (MVP)** ✅ Complete — Wizard → Claude story gen → OpenAI images → Supabase → Vercel. Character consistency via structured fields + character sheets.
