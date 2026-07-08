@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import Image from 'next/image'
 import { motion } from 'motion/react'
 import { ArrowUpRight } from 'lucide-react'
@@ -80,6 +81,22 @@ export default function SampleShowcase({ samples }: Props) {
               </div>
             </motion.a>
           ))}
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-80px' }}
+          variants={fadeUp}
+          className="mt-10 flex justify-center"
+        >
+          <Link
+            href="/gallery"
+            className="inline-flex items-center gap-2 h-10 px-5 rounded-pill border border-border text-sm text-ink-soft font-medium hover:text-ink hover:border-ink/40 transition-colors"
+          >
+            Browse the full gallery
+            <ArrowUpRight className="size-4" aria-hidden />
+          </Link>
         </motion.div>
       </div>
     </section>

@@ -58,7 +58,7 @@ Acceptance: payload size drops; page still flips to reader within a few seconds 
 ### [x] PERF-6 Reader image loading: `next/image` + adjacent-page preload — Sonnet, P1
 `components/reader/StoryReader.tsx:138` and `components/reader/ReaderNav.tsx:76` use raw `<img>` with full-res Supabase URLs. Convert to `next/image` with `sizes` (correct pattern already in `components/marketing/Hero.tsx:130–136`; `next.config.ts` already allowlists the Supabase host). Preload current±1 page images (hidden `<Image priority>` or `link rel=preload`). ReaderNav thumbnails get small `sizes` so Next serves resized variants. Acceptance: page-turn shows no image pop-in on a warm story; image weight on `/read/[slug]` drops.
 
-### [ ] PERF-7 Memoize StoryPreview — Haiku, P2
+### [x] PERF-7 Memoize StoryPreview — Haiku, P2 — done 2026-07-08
 `components/wizard/StoryPreview.tsx` (274 lines) re-renders on every keystroke. Wrap the export in `React.memo`; move per-render option-array `.find()` lookups into `useMemo` keyed on the relevant `data` fields. Acceptance: React DevTools shows no StoryPreview re-render when typing in an unrelated field. (Fine before or after HARD-6.)
 
 ---
@@ -83,13 +83,13 @@ Reader UI: small "Regenerate this illustration" affordance behind an owner check
 ### [x] FEAT-4 Read-aloud — Sonnet, P1 — done 2026-07-07
 Web Speech API (`speechSynthesis`) button in the reader: play/pause per page, auto-advance page when the utterance ends (toggleable). Child-friendly rate (~0.95), prefer an `en` voice; hide the button when `speechSynthesis` is unavailable; stop speech on page change/unmount. Note: iOS requires a user-gesture start. Acceptance: works in Chrome + Safari iOS; no orphaned speech after navigating away.
 
-### [ ] FEAT-5 Print/PDF export polish — Sonnet, P2
+### [x] FEAT-5 Print/PDF export polish — Sonnet, P2 — done 2026-07-08
 `SharePopover.tsx` already triggers `window.print()`. Add a print stylesheet (`@media print` in `globals.css`, or a dedicated `app/read/[slug]/print/page.tsx` rendering all pages sequentially, one per sheet, image + text, no chrome). Rename the action "Save as PDF / Print". Acceptance: print preview shows one clean page per story page, no nav/chrome, images not clipped.
 
-### [ ] FEAT-6 Reader night/day mode — Haiku, P2
+### [x] FEAT-6 Reader night/day mode — Haiku, P2 — done 2026-07-08
 Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `ReaderChrome` persisting to localStorage `kb_reader_theme`; light mode uses existing cream tokens from `app/globals.css`. Class swaps: container `bg-night → bg-cream`, `text-white → text-ink`, glass buttons `bg-white/15 → bg-black/10` (verify each against the tokens). Acceptance: toggle persists across stories; both modes meet contrast on the prose text.
 
-### [ ] FEAT-7 Featured-story gallery — Sonnet, P2
+### [x] FEAT-7 Featured-story gallery — Sonnet, P2 — done 2026-07-08
 `lib/featured-stories.ts` (206 lines) exists with hardcoded metadata; surface it: `/gallery` page of featured covers linking to readers, linked from the landing page (reuse the `SampleShowcase` card pattern). Acceptance: gallery renders from `featured-stories.ts` only; no DB changes.
 
 ---
