@@ -1,5 +1,7 @@
 'use client'
 
+import { useMemo } from 'react'
+import { memo } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArtStyle, WizardFormData, WritingStyle } from '@/types'
 import { fadeUp, springs } from '@/lib/motion'
@@ -77,34 +79,44 @@ function PillTag({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function StoryPreview({ data, step }: Props) {
+function StoryPreview({ data, step }: Props) {
   const hasHero = data.child_name.trim().length > 0
-  const skin = SKIN_TONES.find((s) => s.value === data.skin_tone)
-  const outfit = OUTFITS.find((o) => o.value === data.outfit)
-  const genre = GENRES.find((g) => g.value === data.genre)
-  const lesson = LESSONS.find((l) => l.value === data.lesson)
-  const setting = SETTINGS.find((s) => s.value === data.setting)
-  const companionValues = data.supporting_characters
-    ? data.supporting_characters.split(',').filter(Boolean)
-    : []
-  const companions = COMPANIONS.filter((c) => companionValues.includes(c.value))
-  const artStyle = ART_STYLES.find((s) => s.value === data.art_style)
-  const length = LENGTHS.find((l) => l.value === data.length)
-  const voice = data.writing_style ? WRITING_STYLE_VOICES[data.writing_style] : null
-  const sample = data.writing_style ? VOICE_SAMPLES[data.writing_style] : null
-  const tone = data.tone ? TONE_META[data.tone] : null
+
+  const skin = useMemo(() => SKIN_TONES.find((s) => s.value === data.skin_tone), [data.skin_tone])
+  const outfit = useMemo(() => OUTFITS.find((o) => o.value === data.outfit), [data.outfit])
+  const genre = useMemo(() => GENRES.find((g) => g.value === data.genre), [data.genre])
+  const lesson = useMemo(() => LESSONS.find((l) => l.value === data.lesson), [data.lesson])
+  const setting = useMemo(() => SETTINGS.find((s) => s.value === data.setting), [data.setting])
+  const artStyle = useMemo(() => ART_STYLES.find((s) => s.value === data.art_style), [data.art_style])
+  const length = useMemo(() => LENGTHS.find((l) => l.value === data.length), [data.length])
+
+  const voice = useMemo(() => data.writing_style ? WRITING_STYLE_VOICES[data.writing_style] : null, [data.writing_style])
+  const sample = useMemo(() => data.writing_style ? VOICE_SAMPLES[data.writing_style] : null, [data.writing_style])
+  const tone = useMemo(() => data.tone ? TONE_META[data.tone] : null, [data.tone])
+
+  const companions = useMemo(() => {
+    const companionValues = data.supporting_characters
+      ? data.supporting_characters.split(',').filter(Boolean)
+      : []
+    return COMPANIONS.filter((c) => companionValues.includes(c.value))
+  }, [data.supporting_characters])
+
+  const ideaBits = useMemo(() =>
+    [
+      data.custom_plot_points,
+      data.custom_subjects,
+      data.custom_world_details,
+      data.custom_special_object,
+    ].filter(Boolean) as string[],
+    [data.custom_plot_points, data.custom_subjects, data.custom_world_details, data.custom_special_object]
+  )
+
   const showHero = step >= 1 && hasHero
   const showGenre = step >= 2 && !!genre
   const showLesson = step >= 3 && !!lesson
   const showSetting = step >= 4 && !!setting
   const showStyle = step >= 5 && !!artStyle
   const showVoice = step >= 6 && !!voice
-  const ideaBits = [
-    data.custom_plot_points,
-    data.custom_subjects,
-    data.custom_world_details,
-    data.custom_special_object,
-  ].filter(Boolean) as string[]
   const showIdeas = step >= 7 && (ideaBits.length > 0 || !!data.surprise_me)
 
   const isEmpty = !showHero && !showGenre && !showLesson && !showSetting && !showStyle && !showVoice && !showIdeas
@@ -268,3 +280,5 @@ export default function StoryPreview({ data, step }: Props) {
     </aside>
   )
 }
+
+export default memo(StoryPreview)
