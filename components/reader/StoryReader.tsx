@@ -12,6 +12,7 @@ import ReaderChrome from './ReaderChrome'
 import ReaderNav from './ReaderNav'
 import SharePopover from './SharePopover'
 import { useReadAloud } from './useReadAloud'
+import { useReaderTheme, type ReaderTheme } from './useReaderTheme'
 
 interface Page {
   page_number: number
@@ -44,6 +45,11 @@ export default function StoryReader({ title, pages: initialPages, slug, isOwner 
   const [regens, setRegens] = useState(regensRemaining)
   const [regenerating, setRegenerating] = useState(false)
   const [regenError, setRegenError] = useState<string | null>(null)
+
+  // FEAT-6 night/day theme — persisted to localStorage; does not affect page
+  // index or read-aloud state when toggled.
+  const { theme, toggle: toggleTheme } = useReaderTheme()
+  const isDark = theme === 'night'
 
   const handleRegenerate = async () => {
     if (regenerating || regens <= 0) return
@@ -167,20 +173,31 @@ export default function StoryReader({ title, pages: initialPages, slug, isOwner 
   const pageLabel = isCover ? 'Cover' : isEnd ? 'The End' : `Page ${storyPageIndex} of ${storyPageCount}`
 
   return (
-    <div className="relative min-h-dvh bg-night text-white overflow-hidden">
-      {/* Soft atmospheric blobs */}
+    <div className={cn('relative min-h-dvh overflow-hidden', isDark ? 'bg-night text-white' : 'bg-surface text-ink')}>
+      {/* Soft atmospheric blobs — pulled back a bit in day mode so they don't overpower the cream surface */}
       <div
         aria-hidden
-        className="absolute -top-40 -left-40 size-[480px] rounded-full opacity-30 blur-3xl pointer-events-none"
+        className={cn(
+          'absolute -top-40 -left-40 size-[480px] rounded-full blur-3xl pointer-events-none',
+          isDark ? 'opacity-30' : 'opacity-15',
+        )}
         style={{ background: 'radial-gradient(circle, var(--brand), transparent 70%)' }}
       />
       <div
         aria-hidden
-        className="absolute -bottom-40 -right-40 size-[480px] rounded-full opacity-25 blur-3xl pointer-events-none"
+        className={cn(
+          'absolute -bottom-40 -right-40 size-[480px] rounded-full blur-3xl pointer-events-none',
+          isDark ? 'opacity-25' : 'opacity-10',
+        )}
         style={{ background: 'radial-gradient(circle, var(--accent), transparent 70%)' }}
       />
 
-      <ReaderChrome pageLabel={pageLabel} share={<SharePopover title={title} />} />
+      <ReaderChrome
+        pageLabel={pageLabel}
+        share={<SharePopover title={title} />}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
       <main className="relative min-h-dvh flex items-center justify-center px-4 sm:px-8 pt-20 pb-28">
         {/* Page area */}
@@ -203,11 +220,11 @@ export default function StoryReader({ title, pages: initialPages, slug, isOwner 
               className="touch-pan-y"
             >
               {isCover ? (
-                <CoverLayout title={title} url={page.illustration_url} alt={`Cover illustration for “${title}”`} priority />
+                <CoverLayout title={title} url={page.illustration_url} alt={`Cover illustration for "${title}"`} priority theme={theme} />
               ) : isEnd ? (
-                <EndLayout text={page.text_content} url={page.illustration_url} alt={`Closing illustration for “${title}”`} priority />
+                <EndLayout text={page.text_content} url={page.illustration_url} alt={`Closing illustration for "${title}"`} priority theme={theme} />
               ) : (
-                <StoryLayout text={page.text_content} url={page.illustration_url} alt={`Illustration for page ${page.page_number} of “${title}”`} priority />
+                <StoryLayout text={page.text_content} url={page.illustration_url} alt={`Illustration for page ${page.page_number} of "${title}"`} priority />
               )}
             </motion.div>
           </AnimatePresence>
@@ -224,20 +241,25 @@ export default function StoryReader({ title, pages: initialPages, slug, isOwner 
               aria-label={regenerating ? 'Redrawing illustration' : 'Redraw this illustration'}
               className={cn(
                 'absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 px-3 h-9 rounded-pill',
-                'bg-white/15 backdrop-blur-md text-white/90 text-sm shadow-lg',
-                'hover:bg-white/25 transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+                'backdrop-blur-md text-sm shadow-lg transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2',
                 'disabled:opacity-60 disabled:cursor-not-allowed',
+                isDark
+                  ? 'bg-white/15 text-white/90 hover:bg-white/25 focus-visible:ring-white/60'
+                  : 'bg-surface/80 text-ink hover:bg-surface-raised focus-visible:ring-ink/40',
               )}
             >
               <RefreshCcw className={cn('size-4', regenerating && 'animate-spin')} />
-              <span className="hidden sm:inline">{regenerating ? 'Redrawing…' : 'Redraw'}</span>
+              <span className="hidden sm:inline">{regenerating ? 'Redrawing...' : 'Redraw'}</span>
             </button>
           )}
           {regenError && (
             <div
               role="status"
-              className="absolute top-14 right-3 z-20 max-w-[16rem] rounded-lg bg-black/75 backdrop-blur px-3 py-2 text-xs text-white/90 shadow-lg"
+              className={cn(
+                'absolute top-14 right-3 z-20 max-w-[16rem] rounded-lg backdrop-blur px-3 py-2 text-xs shadow-lg',
+                isDark ? 'bg-black/75 text-white/90' : 'bg-surface/90 text-ink',
+              )}
             >
               {regenError}
             </div>
@@ -256,6 +278,7 @@ export default function StoryReader({ title, pages: initialPages, slug, isOwner 
         atEnd={current === pages.length - 1}
         speaking={speaking}
         onSpeakToggle={speechSupported ? handleSpeakToggle : undefined}
+        theme={theme}
       />
     </div>
   )
@@ -280,7 +303,7 @@ function PageIllustration({ url, alt, className, priority }: { url: string; alt:
   // the visual effect is identical to applying it directly on the <img>.
   //
   // sizes: the illustration lives inside max-w-2xl (672px) with px-4 sm:px-8
-  // padding on <main>. It hits the 672px cap at 672 + 2×32 = 736px viewport.
+  // padding on <main>. It hits the 672px cap at 672 + 2x32 = 736px viewport.
   return (
     <div className={`relative w-full aspect-square ${className ?? ''}`}>
       <Image
@@ -296,9 +319,10 @@ function PageIllustration({ url, alt, className, priority }: { url: string; alt:
   )
 }
 
-function CoverLayout({ title, url, alt, priority }: { title: string; url: string; alt?: string; priority?: boolean }) {
+function CoverLayout({ title, url, alt, priority, theme }: { title: string; url: string; alt?: string; priority?: boolean; theme: ReaderTheme }) {
+  const isDark = theme === 'night'
   return (
-    <div className="rounded-xl overflow-hidden shadow-xl bg-night-soft">
+    <div className={cn('rounded-xl overflow-hidden shadow-xl', isDark ? 'bg-night-soft' : 'bg-surface-sunken')}>
       <div className="relative">
         <PageIllustration url={url} alt={alt || `Cover illustration for ${title}`} priority={priority} />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
@@ -327,18 +351,19 @@ function StoryLayout({ text, url, alt, priority }: { text: string; url: string; 
   )
 }
 
-function EndLayout({ text, url, alt, priority }: { text: string; url: string; alt?: string; priority?: boolean }) {
+function EndLayout({ text, url, alt, priority, theme }: { text: string; url: string; alt?: string; priority?: boolean; theme: ReaderTheme }) {
+  const isDark = theme === 'night'
   const lines = text.split('\n').filter((l) => l.trim())
   return (
-    <div className="rounded-xl overflow-hidden bg-night-soft text-white shadow-xl">
+    <div className={cn('rounded-xl overflow-hidden shadow-xl', isDark ? 'bg-night-soft text-white' : 'bg-surface-raised text-ink')}>
       <PageIllustration url={url} alt={alt || 'Closing illustration'} className="opacity-90" priority={priority} />
       <div className="px-6 py-10 text-center space-y-4">
-        <p className="font-display text-4xl sm:text-5xl text-accent">{lines[0] || 'The End'}</p>
+        <p className={cn('font-display text-4xl sm:text-5xl', isDark ? 'text-accent' : 'text-brand')}>{lines[0] || 'The End'}</p>
         {lines[1] && (
-          <p className="text-xs uppercase tracking-[0.3em] text-white/50">{lines[1]}</p>
+          <p className={cn('text-xs uppercase tracking-[0.3em]', isDark ? 'text-white/50' : 'text-ink-muted')}>{lines[1]}</p>
         )}
         {lines[2] && (
-          <p className="font-display italic text-lg text-white/85 max-w-md mx-auto leading-relaxed">{lines[2]}</p>
+          <p className={cn('font-display italic text-lg max-w-md mx-auto leading-relaxed', isDark ? 'text-white/85' : 'text-ink-soft')}>{lines[2]}</p>
         )}
         <div className="pt-4 flex gap-3 justify-center">
           <Link href="/wizard">

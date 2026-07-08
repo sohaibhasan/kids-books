@@ -2,17 +2,21 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, BookMarked } from 'lucide-react'
+import { ArrowLeft, BookMarked, Sun, Moon } from 'lucide-react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
+import type { ReaderTheme } from './useReaderTheme'
 
 interface Props {
   pageLabel: string
   share: React.ReactNode
+  theme: ReaderTheme
+  onToggleTheme: () => void
 }
 
-export default function ReaderChrome({ pageLabel, share }: Props) {
+export default function ReaderChrome({ pageLabel, share, theme, onToggleTheme }: Props) {
   const [visible, setVisible] = useState(true)
+  const isDark = theme === 'night'
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null
@@ -33,6 +37,11 @@ export default function ReaderChrome({ pageLabel, share }: Props) {
     }
   }, [])
 
+  // Glass pill classes vary between night and day modes.
+  const pillCls = isDark
+    ? 'bg-white/12 backdrop-blur-md text-white/90 hover:bg-white/20'
+    : 'bg-black/8 backdrop-blur-md text-ink hover:bg-black/15'
+
   return (
     <motion.header
       initial={false}
@@ -47,7 +56,7 @@ export default function ReaderChrome({ pageLabel, share }: Props) {
         <div className={cn('flex items-center gap-2 pointer-events-auto', !visible && 'pointer-events-none')}>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-pill bg-white/12 backdrop-blur-md text-white/90 text-sm hover:bg-white/20 transition-colors"
+            className={cn('inline-flex items-center gap-1.5 px-3 h-9 rounded-pill text-sm transition-colors', pillCls)}
           >
             <ArrowLeft className="size-4" />
             <span className="hidden sm:inline">Home</span>
@@ -55,16 +64,30 @@ export default function ReaderChrome({ pageLabel, share }: Props) {
           <Link
             href="/stories"
             aria-label="My stories"
-            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-pill bg-white/12 backdrop-blur-md text-white/90 text-sm hover:bg-white/20 transition-colors"
+            className={cn('inline-flex items-center gap-1.5 px-3 h-9 rounded-pill text-sm transition-colors', pillCls)}
           >
             <BookMarked className="size-4" />
             <span className="hidden sm:inline">My stories</span>
           </Link>
         </div>
-        <p className="text-xs uppercase tracking-widest text-white/70 font-numeral pointer-events-none">
+        <p className={cn('text-xs uppercase tracking-widest font-numeral pointer-events-none', isDark ? 'text-white/70' : 'text-ink-muted')}>
           {pageLabel}
         </p>
-        <div className={cn('pointer-events-auto', !visible && 'pointer-events-none')}>{share}</div>
+        <div className={cn('flex items-center gap-2 pointer-events-auto', !visible && 'pointer-events-none')}>
+          {/* Night/day toggle */}
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            aria-label={isDark ? 'Switch to day mode' : 'Switch to night mode'}
+            className={cn(
+              'inline-flex size-9 items-center justify-center rounded-pill text-sm transition-colors',
+              pillCls,
+            )}
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </button>
+          {share}
+        </div>
       </div>
     </motion.header>
   )
