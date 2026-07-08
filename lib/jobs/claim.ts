@@ -34,7 +34,10 @@ export interface PageStatus {
   image_version?: number        // FEAT-3: bumped (Date.now()) each time this page is regenerated; used as a ?v cache-buster on the public URL
 }
 
-const SELECT_FIELDS =
+// Full-row select used wherever the job runner needs every field it might
+// mutate or inspect. Per-route endpoints deliberately use narrower selects
+// (PERF-5 and intentional read minimisation) — do NOT widen those here.
+export const STORY_SELECT =
   'slug, status, title, form, pages, device_id, credit_event_id, email, notify_email_sent_at, attempts_total, attempts_remaining, page_status, failure_reason'
 
 /**
@@ -66,7 +69,7 @@ export async function claimStory(slug: string): Promise<StoryRow | null> {
     .eq('slug', slug)
     .eq('status', 'pending')
     .gt('attempts_remaining', 0)
-    .select(SELECT_FIELDS)
+    .select(STORY_SELECT)
     .maybeSingle()
   if (fresh.error) {
     console.error(`[claim ${slug}] fresh update error`, fresh.error)
@@ -81,7 +84,7 @@ export async function claimStory(slug: string): Promise<StoryRow | null> {
     .in('status', ['generating_text', 'generating_images'])
     .lt('last_progress_at', stale)
     .gt('attempts_remaining', 0)
-    .select(SELECT_FIELDS)
+    .select(STORY_SELECT)
     .maybeSingle()
   if (recovery.error) {
     console.error(`[claim ${slug}] recovery update error`, recovery.error)
@@ -102,7 +105,7 @@ export async function heartbeat(slug: string): Promise<void> {
 export async function getStoryRow(slug: string): Promise<StoryRow | null> {
   const { data, error } = await supabase
     .from('stories')
-    .select(SELECT_FIELDS)
+    .select(STORY_SELECT)
     .eq('slug', slug)
     .maybeSingle()
   if (error) {
@@ -141,7 +144,7 @@ export async function findExhaustedJobs(limit = 10): Promise<StoryRow[]> {
   const longStale = new Date(Date.now() - 300_000).toISOString()
   const { data, error } = await supabase
     .from('stories')
-    .select(SELECT_FIELDS)
+    .select(STORY_SELECT)
     .in('status', ['pending', 'generating_text', 'generating_images'])
     .lte('attempts_remaining', 0)
     .lt('last_progress_at', longStale)
