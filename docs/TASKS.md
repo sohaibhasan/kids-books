@@ -138,13 +138,13 @@ Acceptance: `a@@b.c`, `a@b.`, `a..b@c.d` rejected consistently client + server.
 ### [x] HARD-2 Split `runStoryJob` into phases — Sonnet, P1 (after PERF-1) — done 2026-07-07
 `lib/jobs/run-story-job.ts` (347 lines, 267-line function) → `textPhase()`, `imagePhase()` (contains the worker pool + a reusable `generatePage()` — FEAT-3 depends on this), `finalize()`. Pure mechanical extraction, no behavior change; keep the single try/catch + handoff semantics at the top level. Acceptance: diff shows moved code only; build passes; a full story generates end-to-end on a preview deploy.
 
-### [ ] HARD-3 Central constants — Haiku, P2
+### [x] HARD-3 Central constants — Haiku, P2 — done 2026-07-08
 Create `lib/config.ts` gathering: job budgets (`run-story-job.ts:13–17`), `POLL_MS`, the `FREE_GLOBAL_DAILY` default, image `BUCKET`. (Pack display strings stay in `lib/credits.ts`.) Import everywhere; no value changes. Acceptance: grep shows each old literal defined once.
 
-### [ ] HARD-4 Shared story-row select + type — Haiku, P2
+### [x] HARD-4 Shared story-row select + type — Haiku, P2 — done 2026-07-08
 `lib/jobs/claim.ts:36` and `status/route.ts:24–27` maintain divergent select strings. Export `STORY_SELECT` + `StoryRow` from `lib/jobs/claim.ts` (or a new `lib/db.ts`) and use in both. Acceptance: one definition, both routes compile.
 
-### [ ] HARD-5 Standard API error helper — Sonnet, P2
+### [x] HARD-5 Standard API error helper — Sonnet, P2 — done 2026-07-08
 Routes return `{error}`, `{paywall, packs}`, and bare 500s inconsistently. Add `apiError(status, code, message)` + `apiOk(data)` in `lib/api.ts`; migrate `stories/start`, `status`, `checkout`, `credits/claim` (the webhook keeps Stripe's expected 2xx/4xx semantics). Keep the `paywall` shape working — `WizardContainer` reads it; update both sides together. Acceptance: paywall + error toasts still function in the browser.
 
 ### [x] HARD-6 Wizard options registry — Sonnet, P1 — done 2026-07-07

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { waitUntil } from '@vercel/functions'
 import { supabase } from '@/lib/supabase'
 import { makeSlug } from '@/lib/utils/slug'
@@ -7,6 +7,7 @@ import { consumeOne, getEntitlement, isGloballyThrottled, refundFailedGen, PACKS
 import { runStoryJob } from '@/lib/jobs/run-story-job'
 import { WizardFormData } from '@/types'
 import { WizardFormSchema } from '@/lib/validation'
+import { apiError, apiOk, apiPaywall } from '@/lib/api'
 
 export const maxDuration = 300
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 })
+    return apiError(400, 'VALIDATION_ERROR', 'invalid body')
   }
 
   // Validate and sanitise the wizard payload.  WizardFormSchema:
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
   const parseResult = WizardFormSchema.safeParse(body)
   if (!parseResult.success) {
     const message = parseResult.error.issues[0]?.message ?? 'invalid input'
-    return NextResponse.json({ error: message }, { status: 400 })
+    return apiError(400, 'VALIDATION_ERROR', message)
   }
   const form = parseResult.data as unknown as WizardFormData
 
@@ -44,22 +45,14 @@ export async function POST(req: NextRequest) {
   const entitlement = await getEntitlement(deviceId, fallbackHash)
 
   if (entitlement.kind === 'none') {
-    return NextResponse.json(
-      {
-        paywall: true,
-        packs: Object.entries(PACKS).map(([id, p]) => ({
-          id, credits: p.credits, label: p.label, price: p.price,
-        })),
-      },
-      { status: 402 },
-    )
+    const packs = Object.entries(PACKS).map(([id, p]) => ({
+      id, credits: p.credits, label: p.label, price: p.price,
+    }))
+    return apiPaywall(packs)
   }
 
   if (entitlement.kind === 'free' && (await isGloballyThrottled())) {
-    return NextResponse.json(
-      { error: 'Free tier is temporarily at capacity. Please try again later.' },
-      { status: 503 },
-    )
+    return apiError(503, 'UNAVAILABLE', 'Free tier is temporarily at capacity. Please try again later.')
   }
 
   const slug = makeSlug(form.child_name)
@@ -71,7 +64,7 @@ export async function POST(req: NextRequest) {
     creditEventId = await consumeOne(deviceId, entitlement.kind, slug)
   } catch (err) {
     console.error('[POST /api/stories/start] consumeOne failed', err)
-    return NextResponse.json({ error: 'credit ledger error' }, { status: 500 })
+    return apiError(500, 'LEDGER_ERROR', 'credit ledger error')
   }
 
   const { error: insertError } = await supabase.from('stories').insert({
@@ -97,10 +90,7 @@ export async function POST(req: NextRequest) {
     // Two concurrent free-tier inserts trip the partial unique index from
     // migration 0005 — one wins, the other gets here. Surface the paywall.
     if (code === '23505' && entitlement.kind === 'free') {
-      return NextResponse.json(
-        { error: 'You have already used your free story. Please purchase a credit pack to make more.' },
-        { status: 402 },
-      )
+      return apiError(402, 'PAYWALL', 'You have already used your free story. Please purchase a credit pack to make more.')
     }
     // For paid tier — refund the credit we just burned so the user isn't out.
     if (entitlement.kind === 'paid') {
@@ -108,7 +98,7 @@ export async function POST(req: NextRequest) {
       catch (refundErr) { console.error('[POST /api/stories/start] refund failed', refundErr) }
     }
     console.error('[POST /api/stories/start] insert failed', insertError)
-    return NextResponse.json({ error: insertError.message ?? 'insert failed' }, { status: 500 })
+    return apiError(500, 'SERVER_ERROR', insertError.message ?? 'insert failed')
   }
 
   // Kick off the worker; it owns claiming + heartbeating from here.
@@ -116,5 +106,5 @@ export async function POST(req: NextRequest) {
     console.error(`[POST /api/stories/start] background job ${slug} threw`, err)
   }))
 
-  return NextResponse.json({ slug })
+  return apiOk({ slug })
 }

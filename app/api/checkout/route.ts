@@ -1,17 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getOrSetDeviceId } from '@/lib/identity'
 import { PACKS } from '@/lib/credits'
 import { appUrl as resolveAppUrl } from '@/lib/app-url'
+import { apiError, apiOk } from '@/lib/api'
 
 export async function POST(req: NextRequest) {
   try {
     const { pack } = (await req.json()) as { pack?: string }
     const def = pack ? PACKS[pack] : null
-    if (!def) return NextResponse.json({ error: 'Unknown pack' }, { status: 400 })
+    if (!def) return apiError(400, 'VALIDATION_ERROR', 'Unknown pack')
 
     const priceId = process.env[def.priceEnv]
-    if (!priceId) return NextResponse.json({ error: `${def.priceEnv} not configured` }, { status: 500 })
+    if (!priceId) return apiError(500, 'SERVER_ERROR', `${def.priceEnv} not configured`)
 
     const { deviceId } = await getOrSetDeviceId()
     const appUrl = resolveAppUrl(req)
@@ -25,10 +26,10 @@ export async function POST(req: NextRequest) {
       cancel_url: `${appUrl}/wizard?canceled=1`,
     })
 
-    return NextResponse.json({ url: session.url })
+    return apiOk({ url: session.url })
   } catch (err) {
     console.error('[POST /api/checkout]', err)
     const message = err instanceof Error ? err.message : 'Unknown error'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return apiError(500, 'SERVER_ERROR', message)
   }
 }
