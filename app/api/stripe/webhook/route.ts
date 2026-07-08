@@ -7,6 +7,32 @@ import { newRandomToken } from '@/lib/identity'
 import { sendEmail } from '@/lib/email'
 import { appUrl as resolveAppUrl } from '@/lib/app-url'
 
+/**
+ * Pure decision function — no I/O, exported for unit testing.
+ *
+ * Decision table:
+ *   livemode true                                        → process (always)
+ *   livemode false + vercelEnv=production + !allow      → block  (test event would grant real credits)
+ *   livemode false + vercelEnv=production + allow=true  → process (explicit escape hatch)
+ *   livemode false + vercelEnv≠production               → process (dev / preview)
+ */
+export function shouldProcessEvent(input: {
+  livemode: boolean
+  vercelEnv: string | undefined
+  allowTestWebhooks: boolean
+}): { process: boolean; reason?: string } {
+  if (input.livemode) return { process: true }
+  if (input.vercelEnv === 'production' && !input.allowTestWebhooks) {
+    return {
+      process: false,
+      reason:
+        'test-mode event received in production — would grant real credits for a fake payment. ' +
+        'Set ALLOW_TEST_WEBHOOKS=1 to override (CLI replays only).',
+    }
+  }
+  return { process: true }
+}
+
 async function alertMalformedWebhook(event: Stripe.Event, reason: string) {
   const to = process.env.ALERT_EMAIL
   if (!to) {
@@ -55,6 +81,22 @@ export async function POST(req: NextRequest) {
   if (!event) {
     console.error('[stripe webhook] invalid signature', lastErr)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+  }
+
+  // Guard: never grant real credits for test-mode events in production.
+  // Returns 200 so Stripe does not retry — the event is intentionally ignored.
+  const guard = shouldProcessEvent({
+    livemode: event.livemode,
+    vercelEnv: process.env.VERCEL_ENV,
+    allowTestWebhooks: process.env.ALLOW_TEST_WEBHOOKS === '1',
+  })
+  if (!guard.process) {
+    console.warn('[stripe webhook] ignoring test-mode event in production', {
+      eventId: event.id,
+      type: event.type,
+      reason: guard.reason,
+    })
+    return NextResponse.json({ received: true, ignored: 'test-mode event in production' })
   }
 
   if (event.type !== 'checkout.session.completed') {
