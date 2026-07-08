@@ -187,20 +187,7 @@ async function runImagePhase(
   const { beat, deadlineHit } = deps
   const form = parseFormLenient(row.form)
   const pages = parsePagesLenient(row.pages)
-  const artStyle: ArtStyle = (form.art_style as ArtStyle) || 'comic-book'
-  const provider: ImageProvider = selectProviderForStyle(artStyle)
-  // Prefer the values stashed on the form during the text phase; fall back to
-  // regex extraction for in-flight stories created before this deploy (their
-  // pages are already composed but the form has no stashed sheet/prefix).
-  const formRecord = form as unknown as Record<string, unknown>
-  const characterSheet =
-    (typeof formRecord.character_sheet === 'string' && formRecord.character_sheet.trim())
-      ? formRecord.character_sheet
-      : extractCharacterSheet(form, pages)
-  const stylePrefix =
-    (typeof formRecord.style_prefix === 'string' && formRecord.style_prefix.trim())
-      ? formRecord.style_prefix
-      : extractStylePrefix(pages)
+  const { artStyle, provider, characterSheet, stylePrefix } = resolveImageContext(form, pages)
 
   // Index page_status by page_number for cheap updates.
   const pageStatusMap = new Map<number, PageStatus>()
@@ -515,6 +502,31 @@ export async function sendSuccessIfNeeded(slug: string): Promise<void> {
   } catch (err) {
     console.error(`[run-story-job ${slug}] success email failed`, err)
   }
+}
+
+/**
+ * Resolve the image-generation context (art style + provider + character sheet
+ * + style prefix) from a story's form + pages. Prefers the values stashed on
+ * the form during the text phase; falls back to regex extraction for in-flight
+ * stories created before that field existed. Shared by the image phase and the
+ * FEAT-3 per-page regenerate endpoint so both resolve identically.
+ */
+export function resolveImageContext(
+  form: WizardFormData,
+  pages: StoryPage[],
+): { artStyle: ArtStyle; provider: ImageProvider; characterSheet: string | undefined; stylePrefix: string | undefined } {
+  const artStyle: ArtStyle = (form.art_style as ArtStyle) || 'comic-book'
+  const provider: ImageProvider = selectProviderForStyle(artStyle)
+  const formRecord = form as unknown as Record<string, unknown>
+  const characterSheet =
+    (typeof formRecord.character_sheet === 'string' && formRecord.character_sheet.trim())
+      ? formRecord.character_sheet
+      : extractCharacterSheet(form, pages)
+  const stylePrefix =
+    (typeof formRecord.style_prefix === 'string' && formRecord.style_prefix.trim())
+      ? formRecord.style_prefix
+      : extractStylePrefix(pages)
+  return { artStyle, provider, characterSheet, stylePrefix }
 }
 
 export function extractCharacterSheet(form: WizardFormData, pages: Array<{ scene_description: string }>): string | undefined {

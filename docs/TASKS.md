@@ -71,7 +71,7 @@ No way to find a story again without the URL. On successful enqueue (`WizardCont
 ### [x] FEAT-2 Wizard draft autosave — Sonnet, P1 — done 2026-07-07
 Wizard state dies on refresh (sessionStorage is only used for the post-Stripe resume, `WizardContainer.tsx:103–105`). Debounced (~500ms) save of `{step, data}` to localStorage `kb_wizard_draft`; on mount, if a draft exists and differs from defaults, show a dismissible "Resume where you left off?" bar (restore vs. start fresh). Clear the draft on successful submit. Must not interfere with the `?paid=1` sessionStorage resume path. Acceptance: fill 3 steps → refresh → resume restores step + data; submit clears draft.
 
-### [ ] FEAT-3 ⚠️ Per-page regenerate (storyboard-lite) — Opus, P1 (after HARD-2)
+### [x] FEAT-3 ⚠️ Per-page regenerate (storyboard-lite) — Opus, P1 (after HARD-2) — done 2026-07-08
 The Phase 2b flagship. New endpoint `POST /api/stories/[slug]/pages/[n]/regenerate`:
 - verify device ownership (`device_id` from `lib/identity.ts` matches the story row);
 - enforce a per-story regen budget (e.g. 3 free regens stored on the row);
@@ -111,7 +111,7 @@ Reader is hard-coded dark (`bg-night`). Add a sun/moon `IconButton` toggle in `R
 ### [x] BUG-5 `?paid=1` resume fails silently — Sonnet, P1
 `WizardContainer.tsx:125–157`: arriving at `/wizard?paid=1` with a missing/corrupt sessionStorage stash shows a success toast but silently does nothing (empty catch at `:147`). When the stash is absent/unparseable: toast "Payment received — your credit is ready. Your previous inputs couldn't be restored, please review and submit again." and land on the review step if partial data exists, else step 1. Acceptance: clear sessionStorage, hit `/wizard?paid=1` → explicit message, no dead-end.
 
-### [ ] BUG-6 ⚠️ Guard test-mode webhooks in production — Sonnet, P1
+### [x] BUG-6 ⚠️ Guard test-mode webhooks in production — Sonnet, P1 — done 2026-07-08
 `app/api/stripe/webhook/route.ts:36–58` tries the live secret then the test secret. After a successful `constructEvent`, check `event.livemode`: if `false` in production (`process.env.VERCEL_ENV === 'production'`), log loudly and **skip granting credits** unless `ALLOW_TEST_WEBHOOKS=1` is set (keeps the CLI replay workflow usable). The `unique(stripe_session)` constraint already prevents dupes; this closes the "test event grants live credits" hole. Acceptance: replayed test event in prod logs + creates no `credit_events` row; live events unaffected. Human review required.
 
 ### [x] BUG-7 Remove the dead Google image provider (or revive it) — Sonnet, P1 — done 2026-07-07

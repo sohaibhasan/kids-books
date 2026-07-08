@@ -42,6 +42,22 @@ export async function getOrSetDeviceId(): Promise<{ deviceId: string; isNew: boo
   return { deviceId: id, isNew: true }
 }
 
+/**
+ * Read the signed device-id cookie WITHOUT minting or setting one. Returns the
+ * id when a validly-signed cookie is present, else null. Safe to call during a
+ * Server Component render (never mutates the cookie jar — unlike
+ * getOrSetDeviceId, which sets a cookie and must only run in a Route Handler /
+ * Server Action). Reuses the same verify() logic as getOrSetDeviceId.
+ */
+export async function getDeviceIdIfPresent(): Promise<string | null> {
+  const jar = await cookies()
+  const raw = jar.get(COOKIE)?.value
+  if (!raw) return null
+  const [id, sig] = raw.split('.')
+  if (id && sig && verify(id, sig)) return id
+  return null
+}
+
 /** Force-set the device-id cookie (used by the magic-link claim flow). */
 export async function setDeviceIdCookie(deviceId: string): Promise<void> {
   const jar = await cookies()

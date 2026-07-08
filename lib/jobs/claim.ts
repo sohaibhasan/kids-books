@@ -31,6 +31,7 @@ export interface PageStatus {
   last_error: string | null
   provider_used: string | null
   previous_rewrites?: string[]  // last few rewritten prompts so the next round can diverge
+  image_version?: number        // FEAT-3: bumped (Date.now()) each time this page is regenerated; used as a ?v cache-buster on the public URL
 }
 
 const SELECT_FIELDS =

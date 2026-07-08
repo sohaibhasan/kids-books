@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { ImageOff, Sparkles } from 'lucide-react'
+import { ImageOff, Sparkles, RefreshCcw } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
 import { readerPageVariants } from '@/lib/motion'
 import ReaderChrome from './ReaderChrome'
 import ReaderNav from './ReaderNav'
@@ -24,12 +25,47 @@ interface Props {
   title: string
   pages: Page[]
   slug: string
+  /** True when the current viewer's device cookie matches the story owner. */
+  isOwner?: boolean
+  /** Remaining per-page regenerations for this story (owner-only). */
+  regensRemaining?: number
 }
 
-export default function StoryReader({ title, pages }: Props) {
+export default function StoryReader({ title, pages: initialPages, slug, isOwner = false, regensRemaining = 0 }: Props) {
   const [current, setCurrent] = useState(0)
   const [direction, setDirection] = useState(1)
   const reduce = useReducedMotion()
+
+  // Local page list so a regenerated illustration can be swapped in place
+  // (the ?v cache-busted URL) without a full reload.
+  const [pages, setPages] = useState<Page[]>(initialPages)
+
+  // FEAT-3 per-page regenerate (owner-only).
+  const [regens, setRegens] = useState(regensRemaining)
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenError, setRegenError] = useState<string | null>(null)
+
+  const handleRegenerate = async () => {
+    if (regenerating || regens <= 0) return
+    const target = current
+    const pageNumber = pages[target]?.page_number
+    if (pageNumber === undefined) return
+    setRegenError(null)
+    setRegenerating(true)
+    try {
+      const res = await fetch(`/api/stories/${slug}/pages/${pageNumber}/regenerate`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.ok || !data?.url) {
+        throw new Error(data?.error || 'Could not redraw this page')
+      }
+      setPages(prev => prev.map((p, i) => (i === target ? { ...p, illustration_url: data.url } : p)))
+      setRegens(r => Math.max(0, r - 1))
+    } catch (err) {
+      setRegenError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setRegenerating(false)
+    }
+  }
 
   // Read-aloud "bedtime mode": while active, each finished utterance advances
   // to the next page and keeps reading. Manual navigation exits the mode.
@@ -41,6 +77,8 @@ export default function StoryReader({ title, pages }: Props) {
 
   const goTo = (idx: number) => {
     const target = Math.max(0, Math.min(idx, pages.length - 1))
+    // Clear any stale regenerate error when the page changes.
+    if (regenError) setRegenError(null)
     // Any human-initiated page turn stops read-aloud; auto-advance doesn't.
     if (!autoAdvanceRef.current && readAloudRef.current) {
       readAloudRef.current = false
@@ -173,6 +211,37 @@ export default function StoryReader({ title, pages }: Props) {
               )}
             </motion.div>
           </AnimatePresence>
+
+          {/* FEAT-3: owner-only redraw affordance over the illustration. Story
+              pages only (cover/end illustrations are decorative). Keeps nav +
+              swipe usable — only the button itself disables while working. */}
+          {isOwner && isStoryPage(page) && regens > 0 && (
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              title={`${regens} redraw${regens === 1 ? '' : 's'} left`}
+              aria-label={regenerating ? 'Redrawing illustration' : 'Redraw this illustration'}
+              className={cn(
+                'absolute top-3 right-3 z-20 inline-flex items-center gap-1.5 px-3 h-9 rounded-pill',
+                'bg-white/15 backdrop-blur-md text-white/90 text-sm shadow-lg',
+                'hover:bg-white/25 transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60',
+                'disabled:opacity-60 disabled:cursor-not-allowed',
+              )}
+            >
+              <RefreshCcw className={cn('size-4', regenerating && 'animate-spin')} />
+              <span className="hidden sm:inline">{regenerating ? 'Redrawing…' : 'Redraw'}</span>
+            </button>
+          )}
+          {regenError && (
+            <div
+              role="status"
+              className="absolute top-14 right-3 z-20 max-w-[16rem] rounded-lg bg-black/75 backdrop-blur px-3 py-2 text-xs text-white/90 shadow-lg"
+            >
+              {regenError}
+            </div>
+          )}
         </div>
       </main>
 
