@@ -186,7 +186,7 @@ Repo has none. Short: what the product is, live URL, stack table (condensed from
 (c) Fold the `AGENTS.md` Vercel notes into CLAUDE.md or reference them explicitly.
 Acceptance: `/new-migration` invocable in a fresh session.
 
-### [x] CTX-5 Secrets hygiene — owner action + Haiku, P0 — code half done 2026-07-07; owner must still revoke/rotate the GitHub + HF tokens in .env
+### [x] CTX-5 Secrets hygiene — owner action + Haiku, P0 — fully done 2026-07-08 — tokens revoked, plaintext credential stripped from the git remote URL, dead .env removed
 Local `.env` contains plaintext `GITHUB_TOKEN` (ghp_…), `HF_TOKEN`, and a Gemini key; `.gitignore` covers them but they sit unrotated on disk and the HF/GH tokens are unused by the app. **Owner:** revoke/rotate the GitHub and HF tokens. **Haiku:** remove `HF_TOKEN` from `.env.example` and the CLAUDE.md env list. Acceptance: no unused credentials in env templates or docs.
 
 ### [x] CTX-6 Land this backlog as `docs/TASKS.md` — done 2026-07-07
