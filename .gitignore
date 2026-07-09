@@ -43,11 +43,15 @@ yarn-error.log*
 .claude/settings.local.json
 .claude/settings.json
 .claude/skills/
+.claude/scheduled_tasks.lock
 .agents/
 skills-lock.json
 
 # Apple iCloud Drive placeholders
 *.icloud
+
+# Supabase CLI local state (project link, version cache)
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo
