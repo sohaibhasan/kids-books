@@ -1,9 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
 import { Sparkles, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/Dialog'
 
 export interface PaywallPack {
   id: string
@@ -41,79 +47,65 @@ export default function PaywallModal({ open, packs, onClose }: Props) {
   }
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          aria-modal="true"
-          role="dialog"
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="p-6 sm:p-8">
+        {/* X close button — Radix DialogClose calls onOpenChange(false) automatically */}
+        <DialogClose
+          className="absolute top-4 right-4 size-8 rounded-md text-ink-soft hover:text-ink hover:bg-ink/5 inline-flex items-center justify-center"
+          aria-label="Close"
         >
-          <div className="absolute inset-0 bg-ink/40 backdrop-blur-sm" onClick={onClose} />
-          <motion.div
-            className="relative bg-surface-raised rounded-xl shadow-xl max-w-md w-full p-6 sm:p-8"
-            initial={{ y: 24, opacity: 0, scale: 0.97 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: 24, opacity: 0, scale: 0.97 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-          >
+          <X className="size-4" />
+        </DialogClose>
+
+        <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-brand font-numeral mb-3">
+          <Sparkles className="size-3.5" />
+          You loved your first story
+        </div>
+
+        <DialogTitle className="mb-2">Make more, anytime</DialogTitle>
+
+        <DialogDescription className="mb-6">
+          Pick a credit pack — no account, no subscription. We&apos;ll email you a recovery link
+          so your credits move with you across devices.
+        </DialogDescription>
+
+        <div className="grid gap-3">
+          {packs.map((p) => (
             <button
-              onClick={onClose}
-              className="absolute top-4 right-4 size-8 rounded-md text-ink-soft hover:text-ink hover:bg-ink/5 inline-flex items-center justify-center"
-              aria-label="Close"
+              key={p.id}
+              onClick={() => buy(p.id)}
+              disabled={pendingPack !== null}
+              className="text-left rounded-lg border border-border hover:border-brand bg-surface px-4 py-4 flex items-center justify-between transition-all disabled:opacity-60"
             >
-              <X className="size-4" />
+              <div>
+                <div className="font-semibold text-ink">{p.label}</div>
+                <div className="text-xs text-ink-muted font-numeral">
+                  {p.price} · {(parseFloat(p.price.replace(/[^0-9.]/g, '')) / p.credits).toFixed(2)} per story
+                </div>
+              </div>
+              <div className="text-brand font-semibold">
+                {pendingPack === p.id ? 'Loading…' : 'Buy →'}
+              </div>
             </button>
+          ))}
+        </div>
 
-            <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-widest text-brand font-numeral mb-3">
-              <Sparkles className="size-3.5" />
-              You loved your first story
-            </div>
-            <h2 className="font-display text-2xl sm:text-3xl text-ink mb-2">Make more, anytime</h2>
-            <p className="text-ink-soft text-sm mb-6">
-              Pick a credit pack — no account, no subscription. We&apos;ll email you a recovery link
-              so your credits move with you across devices.
-            </p>
+        {error && <p className="mt-4 text-sm text-danger">{error}</p>}
 
-            <div className="grid gap-3">
-              {packs.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => buy(p.id)}
-                  disabled={pendingPack !== null}
-                  className="text-left rounded-lg border border-border hover:border-brand bg-surface px-4 py-4 flex items-center justify-between transition-all disabled:opacity-60"
-                >
-                  <div>
-                    <div className="font-semibold text-ink">{p.label}</div>
-                    <div className="text-xs text-ink-muted font-numeral">
-                      {p.price} · {(parseFloat(p.price.replace(/[^0-9.]/g, '')) / p.credits).toFixed(2)} per story
-                    </div>
-                  </div>
-                  <div className="text-brand font-semibold">
-                    {pendingPack === p.id ? 'Loading…' : 'Buy →'}
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {error && <p className="mt-4 text-sm text-danger">{error}</p>}
-
-            <p className="mt-5 text-xs text-ink-soft text-center">
-              Failed generations are automatically refunded — you only pay for stories you actually receive.
-            </p>
-            <p className="mt-2 text-xs text-ink-muted text-center">
-              Secure checkout via Stripe.
-            </p>
-            <div className="mt-2 text-center">
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                Not now
-              </Button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        <p className="mt-5 text-xs text-ink-soft text-center">
+          Failed generations are automatically refunded — you only pay for stories you actually receive.
+        </p>
+        <p className="mt-2 text-xs text-ink-muted text-center">
+          Secure checkout via Stripe.
+        </p>
+        <div className="mt-2 text-center">
+          <DialogClose asChild>
+            <Button variant="ghost" size="sm">
+              Not now
+            </Button>
+          </DialogClose>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }

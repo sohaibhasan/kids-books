@@ -150,7 +150,7 @@ Routes return `{error}`, `{paywall, packs}`, and bare 500s inconsistently. Add `
 ### [x] HARD-6 Wizard options registry — Sonnet, P1 — done 2026-07-07
 `StoryPreview.tsx` imports option arrays from 9 step files (SKIN_TONES, GENRES, LESSONS, SETTINGS, COMPANIONS, ART_STYLES, LENGTHS, OUTFITS + voice/tone maps) — tight coupling. Move all option arrays to `lib/wizard-options.ts` (one export per array, types alongside); steps and StoryPreview import from there; step files keep only UI. Acceptance: no step file exports data; StoryPreview imports options from exactly one module; wizard renders identically.
 
-### [ ] HARD-7 UI class-blob dedupe — Haiku, P2
+### [x] HARD-7 UI class-blob dedupe — Haiku, P2 — done 2026-07-08
 (a) Extract the repeated glass-button classes (`ReaderNav.tsx:45`, similar in `ReaderChrome`) into an `IconButton` `variant="glass"` in `components/ui/IconButton.tsx`.
 (b) After HARD-6: move the `toneSwatch`/`toneCheck` maps from `SelectCard.tsx:27–45` into `lib/wizard-options.ts` so tone→class mapping has one source.
 Acceptance: visual parity (compare screenshots); grep finds each class blob once.
@@ -158,7 +158,7 @@ Acceptance: visual parity (compare screenshots); grep finds each class blob once
 ### [x] HARD-8 Test infrastructure + first suite — Sonnet (setup), P0 — setup done 2026-07-07 (82 assertions, `npm test`); Haiku expansion tasks remain open
 No tests exist. Add `vitest` (devDep) + `"test": "vitest run"` script. First suite, pure functions only (no network/DB): `lib/credits.ts` balance math (mock the supabase client or extract the pure calc), `lib/ai/classify-image-error.ts` (feed representative provider errors), `lib/utils/slug.ts`, `clampText`/`isValidEmail` (move to `lib/utils.ts` per BUG-10), `extractCharacterSheet`/`extractStylePrefix`. Acceptance: `npm test` green locally; ≥20 assertions.
 
-### [ ] HARD-9 Accessible modal primitive — Sonnet, P2
+### [x] HARD-9 Accessible modal primitive — Sonnet, P2 — done 2026-07-08
 `components/paywall/PaywallModal.tsx` is a hand-rolled overlay (no focus trap, no scroll lock, manual Esc). Radix is already a dependency — wrap `@radix-ui/react-dialog` (new subpackage) as `components/ui/Dialog.tsx` styled with existing tokens; rebuild PaywallModal on it, keeping the motion entrance. Acceptance: Tab cycles inside the modal, Esc closes, focus returns to the trigger, background scroll locked.
 
 ### [x] HARD-10 Repo cleanup — Haiku, P2 (needs owner sign-off on (b)) — done 2026-07-08 (stories/ archived to archive/gh-pages-stories branch and removed; GH Pages links retired)
