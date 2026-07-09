@@ -63,3 +63,9 @@ export function useReaderTheme(): { theme: ReaderTheme; toggle: () => void } {
   const toggle = () => writeTheme(theme === 'night' ? 'day' : 'night')
   return { theme, toggle }
 }
+
+export function glassPillClasses(theme: ReaderTheme): string {
+  return theme === 'night'
+    ? 'bg-white/12 backdrop-blur-md text-white/90 hover:bg-white/20'
+    : 'bg-black/8 backdrop-blur-md text-ink hover:bg-black/15'
+}

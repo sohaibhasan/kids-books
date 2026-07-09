@@ -7,7 +7,39 @@
  */
 
 import type { ArtStyle, Genre, WizardFormData } from '@/types'
-import type { SelectCardTone } from '@/components/ui/SelectCard'
+
+// ---------------------------------------------------------------------------
+// SelectCard Tone — used by StepGenre and SelectCard
+// ---------------------------------------------------------------------------
+
+export type SelectCardTone =
+  | 'brand'
+  | 'rose'
+  | 'sage'
+  | 'apricot'
+  | 'sky'
+  | 'lavender'
+  | 'accent'
+
+export const toneSelected: Record<SelectCardTone, string> = {
+  brand:    'bg-brand-tint border-brand',
+  rose:     'bg-[var(--story-rose)]/40 border-[var(--story-rose)]',
+  sage:     'bg-[var(--story-sage)]/40 border-[var(--story-sage)]',
+  apricot:  'bg-[var(--story-apricot)]/40 border-[var(--story-apricot)]',
+  sky:      'bg-[var(--story-sky)]/40 border-[var(--story-sky)]',
+  lavender: 'bg-[var(--story-lavender)]/40 border-[var(--story-lavender)]',
+  accent:   'bg-accent-tint border-accent',
+}
+
+export const toneCheck: Record<SelectCardTone, string> = {
+  brand:    'bg-brand text-white',
+  rose:     'bg-ink text-white',
+  sage:     'bg-ink text-white',
+  apricot:  'bg-ink text-white',
+  sky:      'bg-ink text-white',
+  lavender: 'bg-ink text-white',
+  accent:   'bg-ink text-white',
+}
 
 // ---------------------------------------------------------------------------
 // Appearance — StepChild

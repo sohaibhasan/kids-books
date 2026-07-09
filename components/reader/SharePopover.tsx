@@ -5,12 +5,15 @@ import * as Popover from '@radix-ui/react-popover'
 import { Check, Copy, Printer, Share2 } from 'lucide-react'
 import IconButton from '@/components/ui/IconButton'
 import { cn } from '@/lib/utils'
+import type { ReaderTheme } from './useReaderTheme'
+import { glassPillClasses } from './useReaderTheme'
 
 interface Props {
   title: string
+  theme: ReaderTheme
 }
 
-export default function SharePopover({ title }: Props) {
+export default function SharePopover({ title, theme }: Props) {
   const [copied, setCopied] = useState(false)
   const url = typeof window !== 'undefined' ? window.location.href : ''
 
@@ -41,23 +44,31 @@ export default function SharePopover({ title }: Props) {
     window.open(`/read/${slug}/print`, '_blank', 'noopener')
   }
 
+  const pillCls = glassPillClasses(theme)
+
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <IconButton variant="glass" label="Share" icon={<Share2 />} />
+        <IconButton label="Share" icon={<Share2 />} className={pillCls} />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           align="end"
           sideOffset={10}
           className={cn(
-            'z-40 w-64 p-1.5 rounded-md bg-surface-raised border border-border shadow-lg',
+            'z-40 w-64 p-1.5 rounded-md shadow-lg',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+            theme === 'night'
+              ? 'bg-surface-raised border border-border'
+              : 'bg-surface-raised border border-border',
           )}
         >
           <button
             onClick={copy}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm text-ink hover:bg-brand-tint hover:text-brand-deep transition-colors"
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm transition-colors',
+              theme === 'night' ? 'text-white hover:bg-white/15 hover:text-white' : 'text-ink hover:bg-brand-tint hover:text-brand-deep',
+            )}
           >
             {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
             {copied ? 'Link copied' : 'Copy link'}
@@ -65,7 +76,10 @@ export default function SharePopover({ title }: Props) {
           {typeof navigator !== 'undefined' && 'share' in navigator && (
             <button
               onClick={nativeShare}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm text-ink hover:bg-brand-tint hover:text-brand-deep transition-colors"
+              className={cn(
+                'w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm transition-colors',
+                theme === 'night' ? 'text-white hover:bg-white/15 hover:text-white' : 'text-ink hover:bg-brand-tint hover:text-brand-deep',
+              )}
             >
               <Share2 className="size-4" />
               Share via…
@@ -73,7 +87,10 @@ export default function SharePopover({ title }: Props) {
           )}
           <button
             onClick={openPrint}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm text-ink hover:bg-brand-tint hover:text-brand-deep transition-colors"
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-sm text-sm transition-colors',
+              theme === 'night' ? 'text-white hover:bg-white/15 hover:text-white' : 'text-ink hover:bg-brand-tint hover:text-brand-deep',
+            )}
           >
             <Printer className="size-4" />
             Save as PDF / Print

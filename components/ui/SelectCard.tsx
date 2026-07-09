@@ -3,15 +3,10 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toneSelected, toneCheck, type SelectCardTone } from '@/lib/wizard-options'
 
-export type SelectCardTone =
-  | 'brand'
-  | 'rose'
-  | 'sage'
-  | 'apricot'
-  | 'sky'
-  | 'lavender'
-  | 'accent'
+// Re-export for backward compatibility
+export type { SelectCardTone }
 
 export interface SelectCardProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick'> {
   icon?: ReactNode
@@ -22,26 +17,6 @@ export interface SelectCardProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   size?: 'sm' | 'md'
   tone?: SelectCardTone
   multi?: boolean
-}
-
-const toneSelected: Record<SelectCardTone, string> = {
-  brand:    'bg-brand-tint border-brand',
-  rose:     'bg-[var(--story-rose)]/40 border-[var(--story-rose)]',
-  sage:     'bg-[var(--story-sage)]/40 border-[var(--story-sage)]',
-  apricot:  'bg-[var(--story-apricot)]/40 border-[var(--story-apricot)]',
-  sky:      'bg-[var(--story-sky)]/40 border-[var(--story-sky)]',
-  lavender: 'bg-[var(--story-lavender)]/40 border-[var(--story-lavender)]',
-  accent:   'bg-accent-tint border-accent',
-}
-
-const toneCheck: Record<SelectCardTone, string> = {
-  brand:    'bg-brand text-white',
-  rose:     'bg-ink text-white',
-  sage:     'bg-ink text-white',
-  apricot:  'bg-ink text-white',
-  sky:      'bg-ink text-white',
-  lavender: 'bg-ink text-white',
-  accent:   'bg-ink text-white',
 }
 
 export default function SelectCard({

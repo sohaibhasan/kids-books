@@ -6,6 +6,7 @@ import { ArrowLeft, BookMarked, Sun, Moon } from 'lucide-react'
 import { motion } from 'motion/react'
 import { cn } from '@/lib/utils'
 import type { ReaderTheme } from './useReaderTheme'
+import { glassPillClasses } from './useReaderTheme'
 
 interface Props {
   pageLabel: string
@@ -38,9 +39,7 @@ export default function ReaderChrome({ pageLabel, share, theme, onToggleTheme }:
   }, [])
 
   // Glass pill classes vary between night and day modes.
-  const pillCls = isDark
-    ? 'bg-white/12 backdrop-blur-md text-white/90 hover:bg-white/20'
-    : 'bg-black/8 backdrop-blur-md text-ink hover:bg-black/15'
+  const pillCls = glassPillClasses(theme)
 
   return (
     <motion.header

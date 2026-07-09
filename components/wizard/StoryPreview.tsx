@@ -5,7 +5,7 @@ import { memo } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { ArtStyle, WizardFormData, WritingStyle } from '@/types'
 import { fadeUp, springs } from '@/lib/motion'
-import { SKIN_TONES, OUTFITS, GENRES, LESSONS, SETTINGS, COMPANIONS, ART_STYLES, LENGTHS } from '@/lib/wizard-options'
+import { SKIN_TONES, OUTFITS, GENRES, LESSONS, SETTINGS, COMPANIONS, ART_STYLES, LENGTHS, toneSelected } from '@/lib/wizard-options'
 import { WRITING_STYLE_VOICES, TONE_META, DEPTH_MODIFIERS } from '@/lib/ai/writing-styles'
 
 interface Props {
@@ -43,15 +43,6 @@ const VOICE_SAMPLES: Record<WritingStyle, string> = {
     'She was utterly flummoxed — which, dear reader, is a very fancy word for confused with a question mark on top.',
   'sensory-repetitive':
     'On Monday she found one red leaf. On Tuesday she found two crinkly, crackly leaves. On Wednesday — well, you can guess.',
-}
-
-const toneSwatch: Record<string, string> = {
-  lavender: 'bg-[var(--story-lavender)]/40 border-[var(--story-lavender)]',
-  apricot:  'bg-[var(--story-apricot)]/40 border-[var(--story-apricot)]',
-  sky:      'bg-[var(--story-sky)]/40 border-[var(--story-sky)]',
-  sage:     'bg-[var(--story-sage)]/40 border-[var(--story-sage)]',
-  rose:     'bg-[var(--story-rose)]/40 border-[var(--story-rose)]',
-  accent:   'bg-accent-tint border-accent',
 }
 
 function SectionShell({ title, children }: { title: string; children: React.ReactNode }) {
@@ -175,7 +166,7 @@ function StoryPreview({ data, step }: Props) {
             {showGenre && (
               <SectionShell key="genre" title="Genre">
                 <div
-                  className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm text-ink ${toneSwatch[genre!.tone] ?? toneSwatch.lavender}`}
+                  className={`inline-flex items-center gap-2 rounded-pill border px-3 py-1.5 text-sm text-ink ${toneSelected[genre!.tone] ?? toneSelected.lavender}`}
                 >
                   <span aria-hidden>{genre!.icon}</span>
                   <span className="font-medium">{genre!.label}</span>

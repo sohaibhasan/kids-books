@@ -194,7 +194,7 @@ export default function StoryReader({ title, pages: initialPages, slug, isOwner 
 
       <ReaderChrome
         pageLabel={pageLabel}
-        share={<SharePopover title={title} />}
+        share={<SharePopover title={title} theme={theme} />}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
