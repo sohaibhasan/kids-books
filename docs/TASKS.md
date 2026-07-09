@@ -161,7 +161,7 @@ No tests exist. Add `vitest` (devDep) + `"test": "vitest run"` script. First sui
 ### [ ] HARD-9 Accessible modal primitive — Sonnet, P2
 `components/paywall/PaywallModal.tsx` is a hand-rolled overlay (no focus trap, no scroll lock, manual Esc). Radix is already a dependency — wrap `@radix-ui/react-dialog` (new subpackage) as `components/ui/Dialog.tsx` styled with existing tokens; rebuild PaywallModal on it, keeping the motion entrance. Acceptance: Tab cycles inside the modal, Esc closes, focus returns to the trigger, background scroll locked.
 
-### [ ] HARD-10 Repo cleanup — Haiku, P2 (needs owner sign-off on (b))
+### [x] HARD-10 Repo cleanup — Haiku, P2 (needs owner sign-off on (b)) — done 2026-07-08 (stories/ archived to archive/gh-pages-stories branch and removed; GH Pages links retired)
 (a) Delete the empty `app/api/pages/` directory.
 (b) The 6.6 MB `stories/` GitHub-Pages exports predate Vercel — move to a separate branch or archive; **do not delete without the owner confirming** the two published GH Pages links can go stale or be redirected.
 (c) Remove `HF_TOKEN` from `.env.example` (marked "reserved", used nowhere in source).

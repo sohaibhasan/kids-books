@@ -12,8 +12,7 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 
 - **Production:** https://storybookstudio.org (primary; also `https://www.storybookstudio.org` and the legacy `https://kidsbooks-eight.vercel.app`)
 - **Repo:** https://github.com/sohaibhasan/kids-books
-- **GitHub Pages (legacy static prototype):** https://sohaibhasan.github.io/kids-books/
-- **First story:** https://sohaibhasan.github.io/kids-books/stories/aamilah-and-the-dragon-treasure/
+- **GitHub Pages (retired):** the legacy static-prototype exports were removed from `main` on 2026-07-08; they are preserved on the `archive/gh-pages-stories` branch. Sharing is served by `storybookstudio.org/read/[slug]`.
 
 ## Stack (current)
 
@@ -31,11 +30,11 @@ A web app where parents, teachers, and caregivers create personalized illustrate
 | File Storage | Supabase Storage (`story-images` bucket) |
 | Payments | Stripe Checkout (guest mode, one-time credit packs) — `stripe` SDK |
 | Transactional Email | Resend REST API (magic-link recovery emails) |
-| Hosting | Vercel (primary, `storybookstudio.org`) + GitHub Pages (legacy static shares) |
+| Hosting | Vercel (`storybookstudio.org`) |
 
 ## Current State
 
-The Next.js app is in Phase 2c — the full pipeline (Wizard → Claude story generation → multi-provider image generation → `/read/[slug]` reader) runs end-to-end on Vercel against Supabase, and the entire surface area was redesigned in Phase 2c onto a modern-warm design system. For low-friction sharing, select stories are also exported as self-contained HTML files and deployed to GitHub Pages.
+The Next.js app is in Phase 2c — the full pipeline (Wizard → Claude story generation → multi-provider image generation → `/read/[slug]` reader) runs end-to-end on Vercel against Supabase, and the entire surface area was redesigned in Phase 2c onto a modern-warm design system.
 
 ### Next.js App Structure
 
@@ -120,18 +119,6 @@ last_progress_at     — heartbeat timestamp; cron uses < now()-90s to detect st
 ```
 
 `page.type` is `"cover"`, `"end"`, or omitted (story page). `scene_description` on each page is the server-composed image prompt: `style_prefix + character_sheet + scene` (server composes it from the stashed `form.character_sheet` / `form.style_prefix`).
-
-### GitHub Pages Static Reader (Prototype)
-
-Self-contained HTML files with base64-encoded images, used for shareable links before Vercel deployment:
-```
-stories/<story-slug>/index.html   ← all images base64-inlined
-```
-URL pattern: `https://sohaibhasan.github.io/kids-books/stories/<story-slug>/`
-
-Published stories:
-- Aamilah and the Dragon's Treasure — `aamilah-and-the-dragon-treasure`
-- Minha and the Kind Little Spark — `minha-and-the-kind-little-spark`
 
 ## Architecture
 
@@ -300,14 +287,7 @@ The outfit is the strongest consistency anchor — it's the most visually distin
   - App: `APP_URL=https://storybookstudio.org`
 - See `.env.example` for the full template.
 
-**GitHub Pages (static story shares):** https://sohaibhasan.github.io/kids-books/
-- Self-contained HTML files with base64-encoded images under `stories/<slug>/index.html`
-
-```bash
-# Large push (base64-encoded stories)
-git config http.postBuffer 52428800
-git push -u origin main
-```
+**GitHub Pages (retired 2026-07-08):** the legacy static story exports live on the `archive/gh-pages-stories` branch; nothing deploys to GitHub Pages anymore.
 
 ## Dev Commands
 

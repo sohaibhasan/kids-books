@@ -17,7 +17,7 @@ A web platform where parents, teachers, and caregivers create personalized illus
 | File Storage | Supabase Storage |
 | Payments | Stripe Checkout (credit packs) |
 | Email | Resend (magic-link recovery) |
-| Hosting | Vercel (primary) + GitHub Pages (static shares) |
+| Hosting | Vercel |
 
 ---
 
